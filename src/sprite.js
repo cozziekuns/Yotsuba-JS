@@ -22,6 +22,9 @@ class Container_Discard extends PIXI.Container {
   update() {
     this.updatePosition();
     this.updateChildren();
+    if (this.actor === 0) {
+      console.log(this.discards);
+    }
   }
 
   updatePosition() {
@@ -49,15 +52,19 @@ class Container_Discard extends PIXI.Container {
 
   updateChildren() {
     for (let i = 0; i < this.children.length; i++) {
-      if (i === this.discards.length) {
-        break;
+      let tile = null;
+
+      if (i >= this.discards.length) {
+        tile = -1;
+      } else {
+        tile = this.discards[i];
       }
 
       const sprite = this.children[i];
 
       sprite.x = (i % 6) * TILE_WIDTH;
       sprite.y = Math.floor(i / 6) * TILE_HEIGHT;
-      sprite.tile = this.discards[i];
+      sprite.tile = tile;
       sprite.update();
     }
   }
@@ -120,18 +127,16 @@ class Container_Hand extends PIXI.Container {
 
   updateChildren() {
     this.children.forEach((sprite, index) => {
-      sprite.tile = this.hand.getTileAtIndex(index);
-      sprite.update();
-
-      sprite.x = index * sprite.width;
+      sprite.x = index * TILE_WIDTH;
+      sprite.tile = this.hand.getTileAtIndex(index);      
 
       if (sprite.tile === this.hand.getDrawnTile()) {
         sprite.x += 4;
       }
+
+      sprite.update();
     });
   }
-
-  
 
 }
 
@@ -174,7 +179,7 @@ class Sprite_Tile extends PIXI.Sprite {
 
   update() {
     if (this.tile === -1) {
-      this.texture = null;
+      this.texture = PIXI.Texture.EMPTY;
       return;
     }
 

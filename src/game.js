@@ -116,7 +116,7 @@ class Game_Round {
       return;
     }
 
-    const action = this.actions[this.currentAction];
+    const action = this.actions[this.currentAction - 1];
 
     switch(action.action_type) {
       case 'draw':

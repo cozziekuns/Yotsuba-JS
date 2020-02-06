@@ -53,6 +53,11 @@ class Game_Application {
     this.updateSprites();
   }
 
+  rewindBackward() {
+    this.replay.getCurrentRound().rewindCurrentAction();
+    this.updateSprites();
+  }
+
   createSprites() {
     this.createHandContainers();
     this.createDiscardContainers();
@@ -95,6 +100,16 @@ class Game_Application {
     this.forwardButton.on('mousedown', this.advanceForward.bind(this));
 
     this.context.stage.addChild(this.forwardButton);
+
+    this.backwardButton = new PIXI.Text('<<');
+    this.backwardButton.x = 720 + 72;
+    this.backwardButton.y = 24;
+
+    this.backwardButton.interactive = true;
+    this.backwardButton.buttonMode = true;
+    this.backwardButton.on('mousedown', this.rewindBackward.bind(this));
+
+    this.context.stage.addChild(this.backwardButton);
   }
 
   updateSprites() {
