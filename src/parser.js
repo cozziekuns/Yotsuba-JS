@@ -46,11 +46,8 @@ class Parser_TenhouGame {
 
     for (let i = 0; i < 4; i++) {
       const tiles = node.attributes['hai' + String(i)].value.split(',').map(s => Number(s));
-      
-      const hand = new Game_Hand(tiles);
-      hand.sortTiles();
 
-      round.hands.push(hand);
+      round.hands[i].refreshHaipai(tiles);
     }
 
     this.replay.addRound(round);
@@ -60,7 +57,7 @@ class Parser_TenhouGame {
     const currentRound = this.replay.getLastRound();
 
     const actor = node.nodeName.charCodeAt(0) - 'T'.charCodeAt();
-    const tile = node.nodeName.match(/\d+/)[0];
+    const tile = Number(node.nodeName.match(/\d+/)[0]);
 
     currentRound.wall.push(tile);
 
@@ -72,7 +69,7 @@ class Parser_TenhouGame {
     const currentRound = this.replay.getLastRound();
 
     const actor = node.nodeName.charCodeAt(0) - 'D'.charCodeAt();
-    const tile = node.nodeName.match(/\d+/)[0];
+    const tile = Number(node.nodeName.match(/\d+/)[0]);
 
     const action = new Game_Action('discard', actor, {'tile': tile});
     currentRound.actions.push(action);

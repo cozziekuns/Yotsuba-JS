@@ -18,8 +18,31 @@ class Game_Action {
 
 class Game_Hand {
 
-  constructor(tiles) {
+  constructor(actor) {
+    this.actor = actor;
+    this.tiles = [];
+    this.calls = [];
+  }
+
+  refreshHaipai(tiles) {
     this.tiles = tiles;
+    this.sortTiles();
+  }
+
+  getTileAtIndex(index) {
+    if (index >= this.tiles.length) {
+      return -1;
+    }
+
+    return this.tiles[index];
+  }
+
+  getDrawnTile() {
+    if (this.tiles.length % 3 === 2) {
+      return this.getTileAtIndex(this.tiles.length - 1);
+    }
+
+    return -1;
   }
 
   sortTiles() {
@@ -34,6 +57,7 @@ class Game_Hand {
     const index = this.tiles.indexOf(tile);
 
     this.tiles.splice(index, 1);
+    this.sortTiles();
   }
 
 }
@@ -51,15 +75,28 @@ class Game_Round {
     this.dora = [];
     this.points = [];
 
-    this.hands = [];
-    this.discards = [];
+    this.initHandsAndDiscards();
     this.wall = [];
 
     this.actions = [];
     this.currentAction = 0;
   }
 
+  initHandsAndDiscards() {
+    this.hands = [];
+    this.discards = []
+
+    for (let i = 0; i < 4; i++) {
+      this.hands.push(new Game_Hand(i));  
+      this.discards.push([]);
+    }
+  }
+
   performCurrentAction() {
+    if (this.currentAction === this.actions.length) {
+      return;
+    }
+
     const action = this.actions[this.currentAction];
 
     switch(action.action_type) {
@@ -104,7 +141,7 @@ class Game_Round {
     const tile = action.data.tile;
 
     this.hands[action.actor].discardTile(tile);
-    this.discards.push(tile);
+    this.discards[action.actor].push(tile);
   }
 
   rewindDrawAction(action) {
@@ -117,7 +154,7 @@ class Game_Round {
   rewindDiscardAction(action) {
     const tile = action.data.tile;
 
-    this.discards.pop();
+    this.discards[action.actor].pop();
     this.hands[action.actor].drawTile(tile);
   }
 

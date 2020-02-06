@@ -1,0 +1,8 @@
+const WINDOW_WIDTH = 1280;
+const WINDOW_HEIGHT = 720;
+
+const DISPLAY_WIDTH = 720;
+const DISPLAY_HEIGHT = 720;
+
+const TILE_WIDTH = 40;
+const TILE_HEIGHT = 54;

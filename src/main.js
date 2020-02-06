@@ -40,36 +40,74 @@ class Game_Application {
 
   createContext() {
     this.context = new PIXI.Application({
-      width: 1280,
-      height: 720,
+      width: WINDOW_WIDTH,
+      height: WINDOW_HEIGHT,
       backgroundColor: 0x10A0C0
     });
 
     document.body.appendChild(this.context.view);
   }
 
-  createSprites() {
-    this.createTileSprites();
+  advanceForward() {
+    this.replay.getCurrentRound().performCurrentAction();
+    this.updateSprites();
   }
 
-  createTileSprites() {
-    this.tileSprites = [];
+  createSprites() {
+    this.createHandContainers();
+    this.createDiscardContainers();
+    this.createButtonSprites();
+  }
+
+  createHandContainers() {
+    this.handContainers = [];
 
     this.replay.getCurrentRound().hands.forEach(hand => {
-      hand.tiles.forEach((tile, index) => this.createTileSprite(tile, index));
+      const handContainer = new Container_Hand(hand);
+      handContainer.update();
+
+      this.handContainers.push(handContainer);
+      this.context.stage.addChild(handContainer);
     });
   }
 
-  // Each hand should be a container
-  createTileSprite(tile, index) {
-    const tileSprite = new TileSprite(tile);
+  createDiscardContainers() {
+    this.discardContainers = [];
 
-    tileSprite.x = index * 48;
-    tileSprite.y = 240;
-    tileSprite.update();
+    for (let i = 0; i < 4; i++) {
+      const discardArray = this.replay.getCurrentRound().discards[i];
 
-    this.tileSprites.push(tileSprite);
-    this.context.stage.addChild(tileSprite);
+      const discardContainer = new Container_Discard(i, discardArray);
+      discardContainer.update();
+
+      this.discardContainers.push(discardContainer);
+      this.context.stage.addChild(discardContainer);
+    }
+  }
+    
+  createButtonSprites() {
+    this.forwardButton = new PIXI.Text('>>');
+    this.forwardButton.x = 720 + 24;
+    this.forwardButton.y = 24;
+
+    this.forwardButton.interactive = true;
+    this.forwardButton.buttonMode = true;
+    this.forwardButton.on('mousedown', this.advanceForward.bind(this));
+
+    this.context.stage.addChild(this.forwardButton);
+  }
+
+  updateSprites() {
+    this.updateHandContainers();
+    this.updateDiscardContainers();
+  };
+  
+  updateHandContainers() {
+    this.handContainers.forEach(container => container.update());
+  };
+
+  updateDiscardContainers() {
+    this.discardContainers.forEach(container => container.update());
   }
 
 }
