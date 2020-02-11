@@ -7,6 +7,8 @@ class Game_Application {
   constructor() {
     this.context = null;
     this.replay = null;
+    this.mouseTimeout = null;
+    this.mouseInterval = null;
   }
 
   preloadAllAssets() {
@@ -48,6 +50,10 @@ class Game_Application {
     document.body.appendChild(this.context.view);
   }
 
+  //--------------------------------------------------------------------------
+  // * Replay Action Logic
+  //--------------------------------------------------------------------------
+
   advanceForward() {
     this.replay.getCurrentRound().performCurrentAction();
     this.updateSprites();
@@ -57,6 +63,38 @@ class Game_Application {
     this.replay.getCurrentRound().rewindCurrentAction();
     this.updateSprites();
   }
+
+  //--------------------------------------------------------------------------
+  // * Interval Logic
+  //--------------------------------------------------------------------------
+
+  setAdvanceInterval() {
+    this.advanceForward();
+
+    this.mouseTimeout = setTimeout(function() {
+      this.mouseInterval = setInterval(this.advanceForward.bind(this), REPEAT_TICK);
+    }.bind(this), REPEAT_INITIAL_TICK);
+  }
+
+  setRewindInterval() {
+    this.rewindBackward();
+
+    this.mouseTimeout = setTimeout(function() {
+      this.mouseInterval = setInterval(this.rewindBackward.bind(this), REPEAT_TICK);
+    }.bind(this), REPEAT_INITIAL_TICK);
+  }
+
+  clearMouseIntervalAndTimeout() {
+    clearTimeout(this.mouseTimeout);
+    clearInterval(this.mouseInterval);
+
+    this.mouseTimeout = null;
+    this.mouseInterval = null;
+  }
+
+  //--------------------------------------------------------------------------
+  // * Sprite Handling Logic
+  //--------------------------------------------------------------------------
 
   createSprites() {
     this.createHandContainers();
@@ -97,7 +135,8 @@ class Game_Application {
 
     this.forwardButton.interactive = true;
     this.forwardButton.buttonMode = true;
-    this.forwardButton.on('mousedown', this.advanceForward.bind(this));
+    this.forwardButton.on('mousedown', this.setAdvanceInterval.bind(this));
+    this.forwardButton.on('mouseup', this.clearMouseIntervalAndTimeout.bind(this));
 
     this.context.stage.addChild(this.forwardButton);
 
@@ -107,7 +146,8 @@ class Game_Application {
 
     this.backwardButton.interactive = true;
     this.backwardButton.buttonMode = true;
-    this.backwardButton.on('mousedown', this.rewindBackward.bind(this));
+    this.backwardButton.on('mousedown', this.setRewindInterval.bind(this));
+    this.backwardButton.on('mouseup', this.clearMouseIntervalAndTimeout.bind(this));
 
     this.context.stage.addChild(this.backwardButton);
   }

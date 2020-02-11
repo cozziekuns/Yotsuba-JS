@@ -6,3 +6,6 @@ const DISPLAY_HEIGHT = 720;
 
 const TILE_WIDTH = 40;
 const TILE_HEIGHT = 54;
+
+const REPEAT_INITIAL_TICK = 300;
+const REPEAT_TICK = 100;

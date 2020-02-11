@@ -44,9 +44,17 @@ class Game_Hand {
 
     return -1;
   }
-
+  
   sortTiles() {
     this.tiles.sort((a, b) => a - b);
+  }
+
+  sortWithDrawnTile(drawnTile) {
+    const index = this.tiles.indexOf(drawnTile);
+
+    this.tiles.splice(index, 1);
+    this.sortTiles();
+    this.tiles.push(drawnTile);
   }
 
   drawTile(tile) {
@@ -87,9 +95,19 @@ class Game_Round {
     this.discards = []
 
     for (let i = 0; i < 4; i++) {
-      this.hands.push(new Game_Hand(i));  
+      this.hands.push(new Game_Hand(i));
       this.discards.push([]);
     }
+  }
+
+  getLastDrawAction() {
+    for (let i = this.actions.length - 1; i >= 0; i--) {
+      if (this.actions[i].action_type == 'draw') {
+        return this.actions[i];
+      }
+    }
+
+    return null;
   }
 
   performCurrentAction() {
@@ -131,10 +149,9 @@ class Game_Round {
   }
 
   performDrawAction(action) {
-    const tile = action.data.tile;
-
     this.wall.shift();
-    this.hands[action.actor].drawTile(tile);
+
+    this.hands[action.actor].drawTile(action.data.tile);
   }
 
   performDiscardAction(action) {
@@ -152,10 +169,10 @@ class Game_Round {
   }
 
   rewindDiscardAction(action) {
-    const tile = action.data.tile;
-
     this.discards[action.actor].pop();
-    this.hands[action.actor].drawTile(tile);
+
+    this.hands[action.actor].drawTile(action.data.tile);
+    this.hands[action.actor].sortWithDrawnTile(action.data.drawnTile);
   }
 
 }

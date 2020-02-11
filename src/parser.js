@@ -71,7 +71,9 @@ class Parser_TenhouGame {
     const actor = node.nodeName.charCodeAt(0) - 'D'.charCodeAt();
     const tile = Number(node.nodeName.match(/\d+/)[0]);
 
-    const action = new Game_Action('discard', actor, {'tile': tile});
+    const drawnTile = currentRound.getLastDrawAction().data.tile;
+
+    const action = new Game_Action('discard', actor, {'tile': tile, 'drawnTile': drawnTile});
     currentRound.actions.push(action);
   }
 
