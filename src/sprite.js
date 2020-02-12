@@ -138,6 +138,7 @@ class Container_Discard extends PIXI.Container {
 
       sprite.x = column * TILE_WIDTH;
       sprite.y = row * TILE_HEIGHT;
+      sprite.angle = 0;
 
       if (i === riichiIndex) {
         sprite.angle = 90;
@@ -214,13 +215,8 @@ class Container_RoundInfo extends PIXI.Container {
   }
 
   createPointsSprites() {
-    // TODO: Move this somewhere???
-    const style = new PIXI.TextStyle({
-      fill: 'white',
-      fontFamily: 'Courier New',
-      fontSize: 20,
-      fontWeight: 'bold'
-    });
+    const style = GAME_INFO_TEXT_STYLE;
+    style.fontSize = 20;
 
     this.pointsSprites = [];
 
@@ -240,50 +236,37 @@ class Container_RoundInfo extends PIXI.Container {
       this.pointsSprites.push(pointSprite);
       this.addChild(pointSprite);
     }
-
   }
 
   createRoundSprite() {
-    const style = new PIXI.TextStyle({
-      fill: 'white',
-      fontFamily: 'Courier New',
-      fontSize: 24,
-      fontWeight: 'bold'
-    });
+    const style = GAME_INFO_TEXT_STYLE.clone();
+    style.fontSize = 24;
 
-    const roundSprite = new PIXI.Text('東１局', style);
-    roundSprite.x = GAME_INFO_WIDTH / 2 - 36;
-    roundSprite.y = GAME_INFO_HEIGHT / 2 - 54;
+    this.roundSprite = new PIXI.Text('', style);
+    this.roundSprite.x = GAME_INFO_WIDTH / 2 - 36;
+    this.roundSprite.y = GAME_INFO_HEIGHT / 2 - 58;
 
-    this.addChild(roundSprite);
+    this.addChild(this.roundSprite);
   }
 
   createWallSprite() {
-    const style = new PIXI.TextStyle({
-      fill: 'white',
-      fontFamily: 'Courier New',
-      fontSize: 16,
-      fontWeight: 'bold'
-    });
+    const style = GAME_INFO_TEXT_STYLE.clone();
+    style.fontSize = 16;
 
-    this.wallSprite = new PIXI.Text('山牌：54', style);
+    this.wallSprite = new PIXI.Text('', style);
     this.wallSprite.x = GAME_INFO_WIDTH / 2 - 34;
-    this.wallSprite.y = GAME_INFO_HEIGHT / 2 - 16;
+    this.wallSprite.y = GAME_INFO_HEIGHT / 2 - 20;
 
     this.addChild(this.wallSprite);
   }
 
   createBonusSprite() {
-    const style = new PIXI.TextStyle({
-      fill: 'white',
-      fontFamily: 'Courier New',
-      fontSize: 16,
-      fontWeight: 'bold'
-    });
+    const style = GAME_INFO_TEXT_STYLE.clone();
+    style.fontSize = 16;
 
-    this.bonusSprite = new PIXI.Text('本：0 棒：0', style);
+    this.bonusSprite = new PIXI.Text('', style);
     this.bonusSprite.x = GAME_INFO_WIDTH / 2 - 46;
-    this.bonusSprite.y = GAME_INFO_HEIGHT / 2 + 8;
+    this.bonusSprite.y = GAME_INFO_HEIGHT / 2 + 4;
 
     this.addChild(this.bonusSprite);
   }
@@ -295,7 +278,7 @@ class Container_RoundInfo extends PIXI.Container {
       const doraSprite = new Sprite_Tile(-2);
 
       doraSprite.x = (GAME_INFO_WIDTH - (TILE_WIDTH * 10 / 3)) / 2 + i * (TILE_WIDTH * 2 / 3);
-      doraSprite.y = GAME_INFO_HEIGHT / 2 + 36;
+      doraSprite.y = GAME_INFO_HEIGHT / 2 + 32;
       doraSprite.scale.x = 0.67;
       doraSprite.scale.y = 0.67;
 
@@ -320,18 +303,20 @@ class Container_RoundInfo extends PIXI.Container {
   }
 
   updatePointsSprites() {
-    // TODO: Move this somewhere
-    const actorText = ['東', '南', '西', '北'];
-
     this.round.points.forEach((points, actor) => {
-      const windText = actorText[this.round.getActorWind(actor)];
+      const windText = WIND_ROTATION_TEXT[this.round.getActorWind(actor)];
 
       this.pointsSprites[actor].text = windText + '：' + points;
     });
   }
 
   updateRoundSprite() {
+    const rotationText = ['１','２','３','４'];
 
+    const wind = Math.floor(this.round.round / 4);
+    const rotation = this.round.round % 4;
+
+    this.roundSprite.text = WIND_ROTATION_TEXT[wind] + rotationText[rotation] + '局';
   }
 
   updateWallSprite() {

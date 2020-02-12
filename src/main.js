@@ -58,12 +58,26 @@ class Game_Application {
   //--------------------------------------------------------------------------
 
   advanceForward() {
+    const currentRoundIndex = this.replay.currentRound;
+
     this.replay.getCurrentRound().performCurrentAction();
+
+    if (currentRoundIndex !== this.replay.currentRound) {
+      this.refreshSprites();
+    }
+
     this.updateSprites();
   }
 
   rewindBackward() {
+    const currentRoundIndex = this.replay.currentRound;
+    
     this.replay.getCurrentRound().rewindCurrentAction();
+
+    if (currentRoundIndex !== this.replay.currentRound) {
+      this.refreshSprites();
+    }
+
     this.updateSprites();
   }
 
@@ -178,6 +192,33 @@ class Game_Application {
 
   updateRoundInfoContainer() {
     this.roundInfoContainer.update();
+  }
+
+  //---------------------------------------------------------------------------
+  // * Refresh Sprites on Round Update
+  //---------------------------------------------------------------------------
+
+  refreshSprites() {
+    this.refreshHandContainers();
+    this.refreshDiscardContainers();
+    this.refreshRoundInfoContainer();
+  }
+
+  refreshHandContainers() {
+    this.handContainers.forEach((container, index) => {
+      container.hand = this.replay.getCurrentRound().hands[index];
+    });
+  }
+
+  refreshDiscardContainers() {
+    this.discardContainers.forEach((container, index) => {
+      container.discards = this.replay.getCurrentRound().discards[index];
+      container.riichiIndex = this.replay.getCurrentRound().riichiIndex;
+    });
+  }
+
+  refreshRoundInfoContainer() {
+    this.roundInfoContainer.round = this.replay.getCurrentRound();
   }
 
 }

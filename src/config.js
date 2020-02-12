@@ -10,5 +10,13 @@ const TILE_HEIGHT = 45;
 const GAME_INFO_WIDTH = 6 * TILE_WIDTH + TILE_HEIGHT;
 const GAME_INFO_HEIGHT = 6 * TILE_WIDTH + TILE_HEIGHT;
 
+const GAME_INFO_TEXT_STYLE = new PIXI.TextStyle({
+  fill: 'white',
+  fontFamily: 'Courier New',
+  fontWeight: 'bold'
+});
+
+const WIND_ROTATION_TEXT = ['東', '南', '西', '北'];
+
 const REPEAT_INITIAL_TICK = 300;
-const REPEAT_TICK = 100;
+const REPEAT_TICK = 50;

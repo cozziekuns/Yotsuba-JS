@@ -39,7 +39,7 @@ class Parser_TenhouGame {
   parseInitNode(node) {
     const seed = node.attributes['seed'].value.split(',').map(s => Number(s));
 
-    const round = new Game_Round(seed[0], seed[1]);
+    const round = new Game_Round(this.replay, seed[0], seed[1]);
     round.riibou = seed[2];
     round.dora[0] = seed[5];
     round.points = node.attributes['ten'].value.split(',').map(s => Number(s) * 100);

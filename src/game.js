@@ -76,7 +76,9 @@ class Game_Hand {
 
 class Game_Round {
 
-  constructor(round, homba) {
+  constructor(replay, round, homba) {
+    this.replay = replay;
+
     this.round = round;
     this.homba = homba;
     this.riibou = 0;
@@ -120,6 +122,8 @@ class Game_Round {
 
   performCurrentAction() {
     if (this.currentAction === this.actions.length) {
+      this.rewindToStart();
+      this.replay.gotoNextRound();
       return;
     }
 
@@ -145,6 +149,7 @@ class Game_Round {
 
   rewindCurrentAction() {
     if (this.currentAction === 0) {
+      this.replay.gotoPreviousRound();
       return;
     }
 
@@ -166,6 +171,12 @@ class Game_Round {
     }
 
     this.currentAction -= 1;
+  }
+
+  rewindToStart() {
+    while (this.currentAction !== 0) {
+      this.rewindCurrentAction();
+    }
   }
 
   //--------------------------------------------------------------------------
@@ -248,6 +259,22 @@ class Game_Replay {
 
   addRound(round) {
     this.rounds.push(round);
+  }
+
+  gotoNextRound() {
+    if (this.currentRound === this.rounds.length - 1) {
+      return;
+    }
+
+    this.currentRound += 1;
+  }
+
+  gotoPreviousRound() {
+    if (this.currentRound === 0) {
+      return;
+    }
+
+    this.currentRound -= 1;
   }
 
 }
