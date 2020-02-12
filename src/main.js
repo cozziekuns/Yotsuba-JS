@@ -38,13 +38,16 @@ class Game_Application {
   run() {
     this.createContext();
     this.createSprites();
+    this.updateSprites();
   }
 
   createContext() {
     this.context = new PIXI.Application({
       width: WINDOW_WIDTH,
       height: WINDOW_HEIGHT,
-      backgroundColor: 0x10A0C0
+      backgroundColor: 0x10A0C0,
+      resolution: 2,
+      autoDensity: true,
     });
 
     document.body.appendChild(this.context.view);
@@ -108,7 +111,6 @@ class Game_Application {
 
     this.replay.getCurrentRound().hands.forEach(hand => {
       const handContainer = new Container_Hand(hand);
-      handContainer.update();
 
       this.handContainers.push(handContainer);
       this.context.stage.addChild(handContainer);
@@ -123,7 +125,6 @@ class Game_Application {
       const riichiIndex = this.replay.getCurrentRound().riichiIndex;
 
       const discardContainer = new Container_Discard(i, discardArray, riichiIndex);
-      discardContainer.update();
 
       this.discardContainers.push(discardContainer);
       this.context.stage.addChild(discardContainer);

@@ -80,16 +80,18 @@ class Game_Round {
     this.round = round;
     this.homba = homba;
     this.riibou = 0;
-    this.dora = [];
+    this.dora = [-2, -2, -2, -2, -2];
     this.points = [];
 
-    this.initHandsAndDiscards();
     this.wall = [];
     this.riichiSteps = [0, 0, 0, 0];
     this.riichiIndex = [-1, -1, -1, -1];
 
     this.actions = [];
     this.currentAction = 0;
+    this.tilesLeft = 70;
+
+    this.initHandsAndDiscards();
   }
 
   initHandsAndDiscards() {
@@ -100,6 +102,10 @@ class Game_Round {
       this.hands.push(new Game_Hand(i));
       this.discards.push([]);
     }
+  }
+
+  getActorWind(actor) {
+    return (actor + this.round) % 4;
   }
 
   getLastDrawAction() {
@@ -168,8 +174,9 @@ class Game_Round {
 
   performDrawAction(action) {
     this.wall.shift();
-
     this.hands[action.actor].drawTile(action.data.tile);
+
+    this.tilesLeft -= 1;
   }
 
   performDiscardAction(action) {
@@ -189,6 +196,7 @@ class Game_Round {
 
   performRiichiSuccess(action) {
     this.riichiSteps[action.actor] = 2;
+    this.points[action.actor] -= 1000;
   }
 
   rewindDrawAction(action) {
@@ -196,6 +204,8 @@ class Game_Round {
 
     this.wall.unshift(tile);
     this.hands[action.actor].discardTile(tile);
+
+    this.tilesLeft += 1;
   }
 
   rewindDiscardAction(action) {
@@ -212,6 +222,7 @@ class Game_Round {
 
   rewindRiichiSuccess(action) {
     this.riichiSteps[action.actor] = 1;
+    this.points[action.actor] += 1000;
   }
 
 }

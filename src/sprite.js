@@ -165,6 +165,11 @@ class Container_RoundInfo extends PIXI.Container {
     this.createBackgroundSprite();
     this.createPointsSprites();
     this.createRiichiSprites();
+    this.createRoundSprite();
+    this.createWallSprite();
+    this.createBonusSprite();
+    this.createDoraSprites();
+
     this.setPosition();
   }
 
@@ -188,10 +193,11 @@ class Container_RoundInfo extends PIXI.Container {
 
     for (let i = 0; i < 4; i++) {
       const riichiSprite = new PIXI.Sprite.from(
+        // TODO: Put this somewhere real
         PIXI.loader.resources['img/tennbou-001.png'].texture
       );
 
-      if (i % 2 == 0) {
+      if (i % 2 === 0) {
         riichiSprite.x = (GAME_INFO_WIDTH - riichiSprite.height) / 2;
         riichiSprite.y = riichiSprite.width + (i == 0 ? GAME_INFO_HEIGHT - riichiSprite.width : 0);
       } else {
@@ -208,17 +214,138 @@ class Container_RoundInfo extends PIXI.Container {
   }
 
   createPointsSprites() {
+    // TODO: Move this somewhere???
+    const style = new PIXI.TextStyle({
+      fill: 'white',
+      fontFamily: 'Courier New',
+      fontSize: 20,
+      fontWeight: 'bold'
+    });
 
+    this.pointsSprites = [];
+
+    for (let i = 0; i < 4; i++) {
+      const pointSprite = new PIXI.Text('', style);
+
+      if (i % 2 === 0) {
+        pointSprite.x = GAME_INFO_WIDTH / 2 + (i == 0 ? -50 : 50);
+        pointSprite.y = (i == 0 ? GAME_INFO_HEIGHT - 40 : 40);
+      } else {
+        pointSprite.x = (i == 1 ? GAME_INFO_HEIGHT - 40 : 40);
+        pointSprite.y = GAME_INFO_WIDTH / 2 + (i == 1 ? 50 : -50);
+      }
+
+      pointSprite.angle = 360 - i  * 90;
+
+      this.pointsSprites.push(pointSprite);
+      this.addChild(pointSprite);
+    }
+
+  }
+
+  createRoundSprite() {
+    const style = new PIXI.TextStyle({
+      fill: 'white',
+      fontFamily: 'Courier New',
+      fontSize: 24,
+      fontWeight: 'bold'
+    });
+
+    const roundSprite = new PIXI.Text('東１局', style);
+    roundSprite.x = GAME_INFO_WIDTH / 2 - 36;
+    roundSprite.y = GAME_INFO_HEIGHT / 2 - 54;
+
+    this.addChild(roundSprite);
+  }
+
+  createWallSprite() {
+    const style = new PIXI.TextStyle({
+      fill: 'white',
+      fontFamily: 'Courier New',
+      fontSize: 16,
+      fontWeight: 'bold'
+    });
+
+    this.wallSprite = new PIXI.Text('山牌：54', style);
+    this.wallSprite.x = GAME_INFO_WIDTH / 2 - 34;
+    this.wallSprite.y = GAME_INFO_HEIGHT / 2 - 16;
+
+    this.addChild(this.wallSprite);
+  }
+
+  createBonusSprite() {
+    const style = new PIXI.TextStyle({
+      fill: 'white',
+      fontFamily: 'Courier New',
+      fontSize: 16,
+      fontWeight: 'bold'
+    });
+
+    this.bonusSprite = new PIXI.Text('本：0 棒：0', style);
+    this.bonusSprite.x = GAME_INFO_WIDTH / 2 - 46;
+    this.bonusSprite.y = GAME_INFO_HEIGHT / 2 + 8;
+
+    this.addChild(this.bonusSprite);
+  }
+
+  createDoraSprites() {
+    this.doraSprites = [];
+
+    for (let i = 0; i < 5; i++) {
+      const doraSprite = new Sprite_Tile(-2);
+
+      doraSprite.x = (GAME_INFO_WIDTH - (TILE_WIDTH * 10 / 3)) / 2 + i * (TILE_WIDTH * 2 / 3);
+      doraSprite.y = GAME_INFO_HEIGHT / 2 + 36;
+      doraSprite.scale.x = 0.67;
+      doraSprite.scale.y = 0.67;
+
+      this.doraSprites.push(doraSprite);
+      this.addChild(doraSprite);
+    }
   }
 
   update() {
     this.updatePointsSprites();
     this.updateRiichiSprites();
+    this.updateRoundSprite();
+    this.updateWallSprite();
+    this.updateBonusSprite();
+    this.updateDoraSprites();
   }
 
   updateRiichiSprites() {
-    this.round.riichiSteps.forEach((step, index) => {
-      this.riichiSprites[index].visible = (step == 2)
+    this.round.riichiSteps.forEach((step, actor) => {
+      this.riichiSprites[actor].visible = (step == 2);
+    });
+  }
+
+  updatePointsSprites() {
+    // TODO: Move this somewhere
+    const actorText = ['東', '南', '西', '北'];
+
+    this.round.points.forEach((points, actor) => {
+      const windText = actorText[this.round.getActorWind(actor)];
+
+      this.pointsSprites[actor].text = windText + '：' + points;
+    });
+  }
+
+  updateRoundSprite() {
+
+  }
+
+  updateWallSprite() {
+    this.wallSprite.text = '山牌：' + this.round.tilesLeft;
+  }
+
+  updateBonusSprite() {
+    this.bonusSprite.text = '本：' + this.round.homba + ' 棒：' + this.round.riibou;
+  }
+
+  updateDoraSprites() {
+    this.doraSprites.forEach((sprite, index) => {
+      sprite.tile = this.round.dora[index];
+      sprite.update();
     });
   }
 
@@ -243,6 +370,9 @@ class Sprite_Tile extends PIXI.Sprite {
     const suits = ['man', 'pin', 'sou', 'ji'];
 
     switch(this.tile) {
+      case -2:
+        prefix = 'back';
+        break;
       case 16:
         prefix = 'aka1';
         break;
