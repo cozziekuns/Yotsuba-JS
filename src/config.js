@@ -7,5 +7,9 @@ const DISPLAY_HEIGHT = 720;
 const TILE_WIDTH = 40;
 const TILE_HEIGHT = 54;
 
+// Game Info Size is 5 regular tiles + riichi
+const GAME_INFO_WIDTH = 5 * TILE_WIDTH + TILE_HEIGHT;
+const GAME_INFO_HEIGHT = 5 * TILE_WIDTH + TILE_HEIGHT;
+
 const REPEAT_INITIAL_TICK = 300;
 const REPEAT_TICK = 100;

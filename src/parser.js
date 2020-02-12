@@ -85,10 +85,10 @@ class Parser_TenhouGame {
 
     switch (node.attributes['step'].value) {
       case "1":
-        action = new Game_Action('reach_call', actor, null);
+        action = new Game_Action('riichi_call', actor, null);
         break;
       case "2":
-        action = new Game_Action('reach_success', actor, null);
+        action = new Game_Action('riichi_success', actor, null);
         break;
     }
 

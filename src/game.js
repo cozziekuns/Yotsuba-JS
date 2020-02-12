@@ -85,6 +85,8 @@ class Game_Round {
 
     this.initHandsAndDiscards();
     this.wall = [];
+    this.riichiSteps = [0, 0, 0, 0];
+    this.riichiIndex = [-1, -1, -1, -1];
 
     this.actions = [];
     this.currentAction = 0;
@@ -92,8 +94,8 @@ class Game_Round {
 
   initHandsAndDiscards() {
     this.hands = [];
-    this.discards = []
-
+    this.discards = [];
+    
     for (let i = 0; i < 4; i++) {
       this.hands.push(new Game_Hand(i));
       this.discards.push([]);
@@ -124,6 +126,12 @@ class Game_Round {
       case 'discard':
         this.performDiscardAction(action);
         break;
+      case 'riichi_call':
+        this.performRiichiCall(action);
+        break;
+      case 'riichi_success':
+        this.performRiichiSuccess(action);
+        break;
     }
 
     this.currentAction += 1;
@@ -143,10 +151,20 @@ class Game_Round {
       case 'discard':
         this.rewindDiscardAction(action);
         break;
+      case 'riichi_call':
+        this.rewindRiichiCall(action);
+        break;
+      case 'riichi_success':
+        this.rewindRiichiSuccess(action);
+        break;
     }
 
     this.currentAction -= 1;
   }
+
+  //--------------------------------------------------------------------------
+  // * Perform Action
+  //--------------------------------------------------------------------------
 
   performDrawAction(action) {
     this.wall.shift();
@@ -159,6 +177,18 @@ class Game_Round {
 
     this.hands[action.actor].discardTile(tile);
     this.discards[action.actor].push(tile);
+
+    if (this.riichiSteps[action.actor] === 1) {
+      this.riichiIndex[action.actor] = this.discards[action.actor].length - 1;
+    }
+  }
+
+  performRiichiCall(action) {
+    this.riichiSteps[action.actor] = 1;
+  }
+
+  performRiichiSuccess(action) {
+    this.riichiSteps[action.actor] = 2;
   }
 
   rewindDrawAction(action) {
@@ -173,6 +203,15 @@ class Game_Round {
 
     this.hands[action.actor].drawTile(action.data.tile);
     this.hands[action.actor].sortWithDrawnTile(action.data.drawnTile);
+  }
+
+  rewindRiichiCall(action) {
+    this.riichiSteps[action.actor] = 0;
+    this.riichiIndex[action.actor] = -1;
+  }
+
+  rewindRiichiSuccess(action) {
+    this.riichiSteps[action.actor] = 1;
   }
 
 }

@@ -99,6 +99,7 @@ class Game_Application {
   createSprites() {
     this.createHandContainers();
     this.createDiscardContainers();
+    this.createRoundInfoContainer();
     this.createButtonSprites();
   }
 
@@ -119,13 +120,21 @@ class Game_Application {
 
     for (let i = 0; i < 4; i++) {
       const discardArray = this.replay.getCurrentRound().discards[i];
+      const riichiIndex = this.replay.getCurrentRound().riichiIndex;
 
-      const discardContainer = new Container_Discard(i, discardArray);
+      const discardContainer = new Container_Discard(i, discardArray, riichiIndex);
       discardContainer.update();
 
       this.discardContainers.push(discardContainer);
       this.context.stage.addChild(discardContainer);
     }
+  }
+
+  createRoundInfoContainer() {
+    const round = this.replay.getCurrentRound();
+
+    this.roundInfoContainer = new Container_RoundInfo(round);
+    this.context.stage.addChild(this.roundInfoContainer);
   }
     
   createButtonSprites() {
@@ -155,14 +164,19 @@ class Game_Application {
   updateSprites() {
     this.updateHandContainers();
     this.updateDiscardContainers();
-  };
-  
+    this.updateRoundInfoContainer();
+  }
+
   updateHandContainers() {
     this.handContainers.forEach(container => container.update());
-  };
+  }
 
   updateDiscardContainers() {
     this.discardContainers.forEach(container => container.update());
+  }
+
+  updateRoundInfoContainer() {
+    this.roundInfoContainer.update();
   }
 
 }
