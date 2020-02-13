@@ -27,6 +27,9 @@ class Parser_TenhouGame {
       case (node.nodeName.match(/^[TUVW]\d+/) || {}).input:
         this.parseDrawNode(node);
         break;
+      case 'N':
+        this.parseCallNode(node);
+        break;
       case 'REACH':
         this.parseRiichiNode(node);
         break;
@@ -77,6 +80,21 @@ class Parser_TenhouGame {
     currentRound.actions.push(action);
   }
 
+  parseCallNode(node) {
+    const currentRound = this.replay.getLastRound();
+
+    const actor = Number(node.attributes['who'].value);
+    const data = this.parseCall(Number(node.attributes['m'].value));
+    console.log(data.target);
+    console.log(actor);
+    data.target = (actor + data.target) % 4; 
+
+    console.log(data.target);
+
+    const action = new Game_Action('call', actor, data);
+    currentRound.actions.push(action);
+  }
+
   parseRiichiNode(node) {
     const currentRound = this.replay.getLastRound();
 
@@ -98,7 +116,7 @@ class Parser_TenhouGame {
   parseAgariNode(node) {
     const currentRound = this.replay.getLastRound();
 
-    const actor = Number(node.attributes['who']);
+    const actor = Number(node.attributes['who'].value);
     const data = {}
 
     data['target'] = Number(node.attributes['fromWho'].value);
@@ -113,6 +131,98 @@ class Parser_TenhouGame {
 
     const action = new Game_Action('agari', actor, data);
     currentRound.actions.push(action);
+  }
+
+  //---------------------------------------------------------------------------
+  // * Parse Calls
+  //---------------------------------------------------------------------------
+
+  parseCall(meld) {
+    const callee_rel = meld & 0x3;
+    console.log(meld.toString(2));
+
+    let mentsu = null;
+    let callType = null;
+
+    if (meld & 4) {
+      mentsu = this.parseChi(meld);
+      callType = 'chi'; 
+    } else if (meld & 8) {
+      mentsu = this.parsePon(meld);
+      callType = 'pon';
+    } else if (meld & 16) {
+      mentsu = this.parseAddedKan(meld);
+      callType = 'kakan';
+    } else {
+      mentsu = this.parseKan(meld);
+      callType = (callee_rel ? 'minkan' : 'ankan');
+    }
+
+    return { 
+      target: callee_rel, 
+      mentsu: mentsu, 
+      callType: callType 
+    };
+  }
+
+  parseChi(meld) {
+    let t = (meld & 0xfc00) >> 10;
+    const calledTile = t % 3;
+
+    t = Math.floor(t / 3);
+    t = 9 * Math.floor(t / 7) + (t % 7);
+    t *= 4;
+
+    const mentsu = [
+      t + ((meld & 0x0018) >> 3),
+      t + ((meld & 0x0060) >> 5) + 4,
+      t + ((meld & 0x0180) >> 7) + 8,
+    ]
+
+    if (calledTile === 1) {
+      return [mentsu[1], mentsu[0], mentsu[2]];
+    } else if (calledTile === 2) {
+      return [mentsu[2], mentsu[0], mentsu[1]];
+    }
+
+    return mentsu
+  }
+
+  parsePon(meld) {
+    const unused = (meld & 0x0060) >> 5;
+
+    let t = (meld & 0xfe00) >> 9;
+    const calledTile = t % 3;
+
+    t = Math.floor(t / 3) * 4;
+    
+    let mentsu = [t, t + 1, t + 2, t + 3];
+
+    // Remove the unused tile from the mentsu
+    mentsu.splice(mentsu.indexOf(t + unused), 1);
+
+    if (calledTile === 1) {
+      mentsu = [mentsu[1], mentsu[0], mentsu[2]];
+    } else if (calledTile === 2) {
+      mentsu = [mentsu[2], mentsu[0], mentsu[1]];
+    }
+
+    // Don't understand why we need to do this...
+    const kui = meld & 0x3;
+
+    if (kui < 3) {
+      mentsu = [mentsu[2], mentsu[0], mentsu[1]];
+    }
+      
+    if (kui < 2) {
+      mentsu = [mentsu[2], mentsu[0], mentsu[1]];
+    }
+
+    return mentsu;
+  }
+
+  parseKan() {
+    return null;
   }
 
 }

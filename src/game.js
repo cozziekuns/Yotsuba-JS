@@ -22,6 +22,7 @@ class Game_Hand {
     this.actor = actor;
     this.tiles = [];
     this.calls = [];
+    this.calledFrom = [];
   }
 
   refreshHaipai(tiles) {
@@ -66,6 +67,37 @@ class Game_Hand {
 
     this.tiles.splice(index, 1);
     this.sortTiles();
+  }
+
+  performCall(mentsu, target) {
+    mentsu.forEach((tile) => {
+      if (this.tiles.includes(tile)) {
+        const index = this.tiles.indexOf(tile);
+
+        this.tiles.splice(index, 1);
+      }
+    });
+
+    this.calls.push(mentsu);
+    this.calledFrom.push(target);
+
+    this.sortTiles();
+  }
+
+  rewindLastCall() {
+    // TODO: Special casing for ankan
+    
+    const mentsu = this.calls.pop();
+    const target = this.calledFrom.pop();
+
+    const callee_rel = (4 + target - this.actor) % 4;
+    const tileIndex = (callee_rel - 1) % 2;
+
+    const tile = mentsu.splice(tileIndex, 1);
+
+    mentsu.forEach(tile => this.tiles.push(tile));
+
+    return tile;
   }
 
 }
@@ -122,8 +154,6 @@ class Game_Round {
 
   performCurrentAction() {
     if (this.currentAction === this.actions.length) {
-      this.rewindToStart();
-      this.replay.gotoNextRound();
       return;
     }
 
@@ -135,6 +165,9 @@ class Game_Round {
         break;
       case 'discard':
         this.performDiscardAction(action);
+        break;
+      case 'call':
+        this.performCallAction(action);
         break;
       case 'riichi_call':
         this.performRiichiCall(action);
@@ -149,7 +182,6 @@ class Game_Round {
 
   rewindCurrentAction() {
     if (this.currentAction === 0) {
-      this.replay.gotoPreviousRound();
       return;
     }
 
@@ -161,6 +193,9 @@ class Game_Round {
         break;
       case 'discard':
         this.rewindDiscardAction(action);
+        break;
+      case 'call':
+        this.rewindCallAction(action);
         break;
       case 'riichi_call':
         this.rewindRiichiCall(action);
@@ -201,6 +236,16 @@ class Game_Round {
     }
   }
 
+  performCallAction(action) {
+    this.hands[action.actor].performCall(
+      action.data.mentsu,
+      action.data.target,
+    );
+
+    this.discards[action.data.target].pop();
+    // TODO: do something with action.callType
+  }
+
   performRiichiCall(action) {
     this.riichiSteps[action.actor] = 1;
   }
@@ -217,6 +262,12 @@ class Game_Round {
     this.hands[action.actor].discardTile(tile);
 
     this.tilesLeft += 1;
+  }
+
+  rewindCallAction(action) {
+    const tile = this.hands[action.actor].rewindLastCall();
+
+    this.discards[action.data.target].push(tile);
   }
 
   rewindDiscardAction(action) {
@@ -246,7 +297,7 @@ class Game_Replay {
   
   constructor() {
     this.rounds = [];
-    this.currentRound = 0;
+    this.currentRound = 2;
   }
 
   getCurrentRound() {

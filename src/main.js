@@ -58,27 +58,27 @@ class Game_Application {
   //--------------------------------------------------------------------------
 
   advanceForward() {
-    const currentRoundIndex = this.replay.currentRound;
-
     this.replay.getCurrentRound().performCurrentAction();
-
-    if (currentRoundIndex !== this.replay.currentRound) {
-      this.refreshSprites();
-    }
-
     this.updateSprites();
   }
 
-  rewindBackward() {
-    const currentRoundIndex = this.replay.currentRound;
-    
+  rewindBackward() {    
     this.replay.getCurrentRound().rewindCurrentAction();
-
-    if (currentRoundIndex !== this.replay.currentRound) {
-      this.refreshSprites();
-    }
-
     this.updateSprites();
+  }
+
+  advanceRound() {
+    this.replay.getCurrentRound().rewindToStart();
+    this.replay.gotoNextRound();
+    
+    this.refreshSprites();
+  }
+
+  rewindRound() {
+    this.replay.getCurrentRound().rewindToStart();
+    this.replay.gotoPreviousRound();
+
+    this.refreshSprites();
   }
 
   //--------------------------------------------------------------------------
@@ -151,7 +151,8 @@ class Game_Application {
     this.roundInfoContainer = new Container_RoundInfo(round);
     this.context.stage.addChild(this.roundInfoContainer);
   }
-    
+  
+  // TODO: Clean this up... eventually...
   createButtonSprites() {
     this.forwardButton = new PIXI.Text('>>');
     this.forwardButton.x = 720 + 24;
@@ -174,6 +175,26 @@ class Game_Application {
     this.backwardButton.on('mouseup', this.clearMouseIntervalAndTimeout.bind(this));
 
     this.context.stage.addChild(this.backwardButton);
+
+    this.nextRoundButton = new PIXI.Text('>❙');
+    this.nextRoundButton.x = 720 + 24;
+    this.nextRoundButton.y = 60;
+    this.nextRoundButton.interactive = true;
+    this.nextRoundButton.buttonMode = true;
+
+    this.nextRoundButton.on('mousedown', this.advanceRound.bind(this));
+
+    this.context.stage.addChild(this.nextRoundButton);
+
+    this.previousRoundButton = new PIXI.Text('❙<');
+    this.previousRoundButton.x = 720 + 72;
+    this.previousRoundButton.y = 60;
+
+    this.previousRoundButton.interactive = true;
+    this.previousRoundButton.buttonMode = true;
+    this.previousRoundButton.on('mousedown', this.rewindRound.bind(this));
+
+    this.context.stage.addChild(this.previousRoundButton);
   }
 
   updateSprites() {
@@ -202,6 +223,7 @@ class Game_Application {
     this.refreshHandContainers();
     this.refreshDiscardContainers();
     this.refreshRoundInfoContainer();
+    this.updateSprites();
   }
 
   refreshHandContainers() {
