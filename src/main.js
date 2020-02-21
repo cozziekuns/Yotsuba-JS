@@ -117,6 +117,7 @@ class Game_Application {
     this.createHandContainers();
     this.createDiscardContainers();
     this.createRoundInfoContainer();
+    this.createCallContainers();
     this.createButtonSprites();
   }
 
@@ -143,6 +144,17 @@ class Game_Application {
       this.discardContainers.push(discardContainer);
       this.context.stage.addChild(discardContainer);
     }
+  }
+
+  createCallContainers() {
+    this.callContainers = [];
+
+    this.replay.getCurrentRound().hands.forEach(hand => {
+      const callContainer = new Container_Call(hand);
+
+      this.callContainers.push(callContainer);
+      this.context.stage.addChild(callContainer);
+    });
   }
 
   createRoundInfoContainer() {
@@ -200,6 +212,7 @@ class Game_Application {
   updateSprites() {
     this.updateHandContainers();
     this.updateDiscardContainers();
+    this.updateCallContainers();
     this.updateRoundInfoContainer();
   }
 
@@ -209,6 +222,10 @@ class Game_Application {
 
   updateDiscardContainers() {
     this.discardContainers.forEach(container => container.update());
+  }
+
+  updateCallContainers() {
+    this.callContainers.forEach(container => container.update());
   }
 
   updateRoundInfoContainer() {

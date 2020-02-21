@@ -85,11 +85,7 @@ class Parser_TenhouGame {
 
     const actor = Number(node.attributes['who'].value);
     const data = this.parseCall(Number(node.attributes['m'].value));
-    console.log(data.target);
-    console.log(actor);
     data.target = (actor + data.target) % 4; 
-
-    console.log(data.target);
 
     const action = new Game_Action('call', actor, data);
     currentRound.actions.push(action);

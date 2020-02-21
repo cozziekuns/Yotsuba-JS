@@ -9,7 +9,7 @@ class Container_Hand extends PIXI.Container {
     this.hand = hand;
 
     this.createTileSprites();
-    this.setPivot();
+    // this.setPivot();
   }
 
   createTileSprites() {
@@ -30,22 +30,25 @@ class Container_Hand extends PIXI.Container {
   }
 
   updatePosition() {
+    this.x = (DISPLAY_WIDTH - 14 * TILE_WIDTH) / 2;
+    this.y = (DISPLAY_HEIGHT - TILE_HEIGHT);
+
     switch (this.hand.actor) {
       case 0:
-        this.x = this.pivot.x + (DISPLAY_WIDTH - 14 * TILE_WIDTH) / 2;
-        this.y = this.pivot.y + (DISPLAY_HEIGHT - TILE_HEIGHT);
+        this.x = (DISPLAY_WIDTH - 14 * TILE_WIDTH) / 2;
+        this.y = DISPLAY_HEIGHT - TILE_HEIGHT;
         break;
       case 1:
-        this.x = this.pivot.y + (DISPLAY_WIDTH - TILE_WIDTH);
-        this.y = this.pivot.x + (DISPLAY_HEIGHT - 14 * TILE_WIDTH) / 2;
+        this.x = DISPLAY_WIDTH - TILE_HEIGHT;
+        this.y = (DISPLAY_WIDTH + 14 * TILE_WIDTH) / 2;
         break;
       case 2:
-        this.x = this.pivot.x + (DISPLAY_WIDTH - 14 * TILE_WIDTH) / 2;
-        this.y = this.pivot.y;
+        this.x = (DISPLAY_WIDTH + 14 * TILE_WIDTH) / 2;
+        this.y = TILE_HEIGHT;
         break;
       case 3:
-        this.x = this.pivot.y;
-        this.y = this.pivot.x + (DISPLAY_HEIGHT - 14 * TILE_WIDTH) / 2;
+        this.x = TILE_HEIGHT;
+        this.y = (DISPLAY_WIDTH - 14 * TILE_WIDTH) / 2;
         break;
     }
 
@@ -66,6 +69,70 @@ class Container_Hand extends PIXI.Container {
   }
 
 }
+
+//=============================================================================
+// ** Container_Call
+//=============================================================================
+
+class Container_Call extends PIXI.Container {
+
+  constructor(hand) {
+    super();
+    this.hand = hand;
+
+    this.createCallSprites();
+  }
+
+  createCallSprites() {
+    for (let i = 0; i < 3; i++) {
+      const tileSprite = new Sprite_Tile(-1);
+      this.addChild(tileSprite);
+    }
+  }
+
+  update() {
+    this.updatePosition();
+    this.updateChildren();
+  }
+
+  updatePosition() {
+    switch (this.hand.actor) {
+      case 0:
+        this.x = DISPLAY_WIDTH;
+        this.y = DISPLAY_HEIGHT;
+        break;
+      case 1:
+        this.x = DISPLAY_WIDTH;
+        this.y = 0;
+        break;
+      case 2:
+        this.x = 0;
+        this.y = 0;
+        break;
+      case 3:
+        this.x = 0;
+        this.y = DISPLAY_HEIGHT
+        break;
+    }
+
+    this.angle = 360 - this.hand.actor * 90;
+  }
+
+  updateChildren() {
+    let currPosX = 0;
+    for (let i = 0; i < this.children.length; i++) {
+      const sprite = this.children[i];
+      sprite.x = currPosX - TILE_WIDTH;
+      sprite.y = -TILE_HEIGHT;
+      sprite.tile = 1;
+
+      sprite.update();
+      currPosX -= TILE_WIDTH;
+    }
+  }
+
+}
+
 
 //=============================================================================
 // ** Container_Discard
