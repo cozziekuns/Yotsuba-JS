@@ -13,6 +13,19 @@ class Game_Action {
 }
 
 //=============================================================================
+// ** Game_Call
+//=============================================================================
+
+class Game_Call {
+
+  constructor(mentsu, target) {
+    this.mentsu = mentsu;
+    this.target = target;
+  }
+
+}
+
+//=============================================================================
 // ** Game_Hand
 //=============================================================================
 
@@ -22,7 +35,6 @@ class Game_Hand {
     this.actor = actor;
     this.tiles = [];
     this.calls = [];
-    this.calledFrom = [];
   }
 
   refreshHaipai(tiles) {
@@ -78,26 +90,30 @@ class Game_Hand {
       }
     });
 
-    this.calls.push(mentsu);
-    this.calledFrom.push(target);
+    this.calls.push(new Game_Call(mentsu, target));
 
     this.sortTiles();
   }
 
   rewindLastCall() {
     // TODO: Special casing for ankan
-    
-    const mentsu = this.calls.pop();
-    const target = this.calledFrom.pop();
+    const lastCall = this.calls.pop();
 
-    const callee_rel = (4 + target - this.actor) % 4;
+    // TODO: figure out this logic for kans
+    const callee_rel = (4 + lastCall.target - this.actor) % 4;
     const tileIndex = (callee_rel - 1) % 2;
 
-    const tile = mentsu.splice(tileIndex, 1);
+    const calledTile = lastCall.mentsu[tileIndex];
 
-    mentsu.forEach(tile => this.tiles.push(tile));
+    lastCall.mentsu.forEach(tile => {
+      if (tile !== calledTile) {
+        this.tiles.push(tile);
+      }
+    });
 
-    return tile;
+    this.sortTiles();
+
+    return calledTile;
   }
 
 }

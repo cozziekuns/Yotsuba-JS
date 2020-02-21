@@ -119,20 +119,43 @@ class Container_Call extends PIXI.Container {
   }
 
   updateChildren() {
-    let currPosX = 0;
-    for (let i = 0; i < this.children.length; i++) {
-      const sprite = this.children[i];
-      sprite.x = currPosX - TILE_WIDTH;
-      sprite.y = -TILE_HEIGHT;
-      sprite.tile = 1;
-
+    this.children.forEach(sprite => {
+      sprite.tile = -1;
       sprite.update();
-      currPosX -= TILE_WIDTH;
-    }
+    });
+
+    let currIndex = 0;
+    let currPosX = 0;
+
+    this.hand.calls.forEach(call => {
+      const callee_rel = (4 + call.target - this.hand.actor) % 4;
+      const tileIndex = -1 * (callee_rel - 3);
+
+      call.mentsu.slice().reverse().forEach((tile, index) => {
+        const sprite = this.children[currIndex];
+
+        if (index === (2 - tileIndex)) {
+          sprite.x = currPosX - TILE_HEIGHT;
+          sprite.y = 0;
+          sprite.angle = 270;
+          currPosX -= TILE_HEIGHT;
+        } else {
+          sprite.x = currPosX - TILE_WIDTH;
+          sprite.y = -TILE_HEIGHT
+          sprite.angle = 0;
+          currPosX -= TILE_WIDTH;
+        }
+
+        sprite.tile = tile;
+        sprite.update();
+  
+        currIndex += 1;
+      });
+
+    });
   }
 
 }
-
 
 //=============================================================================
 // ** Container_Discard
