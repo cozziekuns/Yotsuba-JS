@@ -89,8 +89,8 @@ class Parser_TenhouGame {
     const actor = node.nodeName.charCodeAt(0) - 'D'.charCodeAt();
     const tile = Number(node.nodeName.match(/\d+/)[0]);
 
-    const lastDrawnAction = currentRound.getLastDrawAction();
-    const drawnTile = (lastDrawnAction ? lastDrawnAction.data.tile : null);
+    const lastDrawAction = currentRound.getLastDrawAction();
+    const drawnTile = (lastDrawAction ? lastDrawAction.data.tile : null);
 
     const action = new Game_Action('discard', actor, {'tile': tile, 'drawnTile': drawnTile});
     currentRound.actions.push(action);
@@ -151,7 +151,6 @@ class Parser_TenhouGame {
 
   parseCall(meld) {
     const callee_rel = meld & 0x3;
-    console.log(meld.toString(2));
 
     let mentsu = null;
     let callType = null;

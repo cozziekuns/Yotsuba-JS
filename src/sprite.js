@@ -1,4 +1,106 @@
 //=============================================================================
+// ** Sprite_Tile
+//=============================================================================
+
+class Sprite_Tile extends PIXI.Sprite {
+
+  constructor(tile) {
+    super();
+    this.tile = tile;
+  }
+
+  textureFilename() {
+    let prefix = ''
+
+    // TODO: turn this into a real util function
+    const tileValue = Math.floor((this.tile % 36) / 4) + 1;
+    const suits = ['man', 'pin', 'sou', 'ji'];
+
+    switch(this.tile) {
+      case -2:
+        prefix = 'back';
+        break;
+      case 16:
+        prefix = 'aka1';
+        break;
+      case 52:
+        prefix = 'aka2';
+        break;
+      case 88:
+        prefix = 'aka3';
+        break;
+      default:
+        prefix = suits[Math.floor(this.tile / 36)];
+        prefix += tileValue;
+        break;
+    }
+
+    return prefix + '.png';
+  }
+
+  update() {
+    if (this.tile === -1) {
+      this.texture = PIXI.Texture.EMPTY;
+      return;
+    }
+
+    this.texture = PIXI.loader.resources['img/' + this.textureFilename()].texture;
+  }
+
+}
+
+//=============================================================================
+// ** Sprite_Voice
+//=============================================================================
+
+class Sprite_Voice extends PIXI.Text {
+
+  constructor(index, actor) {
+    super();
+    this.index = index;
+    this.actor = actor;
+    this.style = VOICE_TEXT_STYLE;
+  }
+
+  update() {
+    this.updateTextString()
+    this.updateTextPosition();
+  }
+
+  updateTextString() {
+    if (this.actor.voice >= 0) {
+      this.text = VOICE_TEXT[this.actor.voice];
+    } else {
+      this.text = '';
+    }
+  }
+
+  updateTextPosition() {
+    switch(this.index) {
+      case 0:
+        this.x = (DISPLAY_WIDTH - this.width) / 2;
+        this.y = DISPLAY_HEIGHT - 128;
+        break;
+      case 1:
+        this.x = DISPLAY_WIDTH - 128;
+        this.y = (DISPLAY_HEIGHT + this.width) / 2;
+        break;
+      case 2:
+        this.x = (DISPLAY_WIDTH + this.width) / 2;
+        this.y = 128;
+        break;
+      case 3:
+        this.x = 128;
+        this.y = (DISPLAY_HEIGHT - this.width) / 2;
+        break;
+    }
+
+    this.angle = 360 - 90 * this.index;
+  }
+
+}
+
+//=============================================================================
 // ** Container_Hand
 //=============================================================================
 
@@ -55,7 +157,7 @@ class Container_Hand extends PIXI.Container {
       sprite.x = index * TILE_WIDTH;
       sprite.tile = this.actor.hand.getTileAtIndex(index); 
 
-      if (sprite.tile === this.actor.hand.getDrawnTile()) {
+      if (this.actor.hasDrawnTile && index == this.actor.hand.tiles.length - 1) {
         sprite.x += 4;
       }
 
@@ -419,57 +521,6 @@ class Container_RoundInfo extends PIXI.Container {
       sprite.tile = this.round.dora[index];
       sprite.update();
     });
-  }
-
-}
-
-//=============================================================================
-// ** Sprite_Tile
-//=============================================================================
-
-class Sprite_Tile extends PIXI.Sprite {
-
-  constructor(tile) {
-    super();
-    this.tile = tile;
-  }
-
-  textureFilename() {
-    let prefix = ''
-
-    // TODO: turn this into a real util function
-    const tileValue = Math.floor((this.tile % 36) / 4) + 1;
-    const suits = ['man', 'pin', 'sou', 'ji'];
-
-    switch(this.tile) {
-      case -2:
-        prefix = 'back';
-        break;
-      case 16:
-        prefix = 'aka1';
-        break;
-      case 52:
-        prefix = 'aka2';
-        break;
-      case 88:
-        prefix = 'aka3';
-        break;
-      default:
-        prefix = suits[Math.floor(this.tile / 36)];
-        prefix += tileValue;
-        break;
-    }
-
-    return prefix + '.png';
-  }
-
-  update() {
-    if (this.tile === -1) {
-      this.texture = PIXI.Texture.EMPTY;
-      return;
-    }
-
-    this.texture = PIXI.loader.resources['img/' + this.textureFilename()].texture;
   }
 
 }

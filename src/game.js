@@ -99,7 +99,7 @@ class Game_Hand {
     // TODO: Special casing for kans
     const lastCall = this.calls.pop();
 
-    const callee_rel = (4 + lastCall.target - this.actor) % 4;
+    const callee_rel = (4 + lastCall.target - this.actor.index) % 4;
     const tileIndex = (callee_rel - 1) % 2;
 
     const calledTile = lastCall.mentsu[tileIndex];
@@ -111,7 +111,7 @@ class Game_Hand {
     });
 
     this.sortTiles();
-
+    
     return calledTile;
   }
 
@@ -137,6 +137,9 @@ class Game_Actor {
 
     this.hand = new Game_Hand(this);
     this.discards = [];
+    this.hasDrawnTile = false;
+
+    this.voice = -1;
   }
 
   refresh() {
@@ -145,6 +148,7 @@ class Game_Actor {
 
   drawTile(tile) {
     this.hand.drawTile(tile);
+    this.hasDrawnTile = true;
   }
 
   discardTile(tile) {
@@ -154,6 +158,9 @@ class Game_Actor {
     if (this.riichiStep === 1) {
       this.riichiIndex = this.discards.length - 1;
     }
+
+    this.hasDrawnTile = false;
+    this.voice = -1;
   }
 
   performCall(mentsu, target) {
@@ -162,6 +169,7 @@ class Game_Actor {
 
   performRiichiCall() {
     this.riichiStep = 1;
+    this.voice = 0;
   }
 
   performRiichiSuccess() {
@@ -171,6 +179,7 @@ class Game_Actor {
 
   rewindDraw(tile) {
     this.hand.discardTile(tile);
+    this.hasDrawnTile = false;
   }
 
   rewindDiscard(tile, drawnTile) {
@@ -182,10 +191,12 @@ class Game_Actor {
 
     this.hand.drawTile(tile);
 
-    if (drawnTile) {
+    if (drawnTile !== null) {
       this.hand.sortWithDrawnTile(drawnTile);
+      this.hasDrawnTile = true;
     } else {
       this.hand.sortTiles();
+      this.hasDrawnTile = false;
     }
   }
 
@@ -224,10 +235,6 @@ class Game_Round {
     this.tilesLeft = 70;
   }
 
-  initHandsAndDiscards() {
-    
-  }
-
   getActorWind(actor) {
     const remainder = (actor - this.round) % 4;
 
@@ -235,8 +242,8 @@ class Game_Round {
   }
 
   getLastDrawAction() {
-    if (this.actions.length > 1) {
-      const previousAction = this.actions[this.actions.length - 2];
+    if (this.actions.length > 0) {
+      const previousAction = this.actions[this.actions.length - 1];
 
       if (previousAction.action_type == 'draw') {
         return previousAction;
@@ -269,6 +276,9 @@ class Game_Round {
       case 'riichi_success':
         this.performRiichiSuccess(action);
         break;
+      case 'agari':
+        this.performAgari(action);
+        break;
     }
 
     this.currentAction += 1;
@@ -296,6 +306,9 @@ class Game_Round {
         break;
       case 'riichi_success':
         this.rewindRiichiSuccess(action);
+        break;
+      case 'agari':
+        this.rewindAgari(action);
         break;
     }
 
@@ -332,7 +345,18 @@ class Game_Round {
     )
 
     this.actors[action.data.target].discards.pop();
-    // TODO: do something with action.callType
+
+    switch(action.data.callType) {
+      case 'chi':
+        this.actors[action.actor].voice = 3;
+        break;
+      case 'pon':
+        this.actors[action.actor].voice = 4;
+        break;
+      case 'kakan', 'minkan', 'ankan':
+        this.actors[action.actor].voice = 5;
+        break;
+    }
   }
 
   performRiichiCall(action) {
@@ -341,6 +365,10 @@ class Game_Round {
 
   performRiichiSuccess(action) {
     this.actors[action.actor].performRiichiSuccess();
+  }
+
+  performAgari(action) {
+    this.actors[action.actor].voice = (action.data.target == action.actor ? 2 : 1);
   }
 
   rewindDrawAction(action) {
@@ -362,7 +390,7 @@ class Game_Round {
   rewindCallAction(action) {
     const tile = this.actors[action.actor].hand.rewindLastCall();
 
-    this.discards[action.data.target].push(tile);
+    this.actors[action.data.target].discards.push(tile);
   }
 
   rewindRiichiCall(action) {
@@ -371,6 +399,10 @@ class Game_Round {
 
   rewindRiichiSuccess(action) {
     this.actors[action.actor].rewindRiichiSuccess();
+  }
+
+  rewindAgari(action) {
+    this.actors[action.actor].voice = -1;
   }
 
 }
@@ -396,7 +428,7 @@ class Game_Replay {
     }
   }
 
-  startRound() {
+  startCurrentRound() {
     const round = this.rounds[this.currentRound];
 
     this.actors.forEach((actor, index) => {
@@ -423,7 +455,7 @@ class Game_Replay {
     }
 
     this.currentRound += 1;
-    this.startRound();
+    this.startCurrentRound();
   }
 
   gotoPreviousRound() {
@@ -432,7 +464,7 @@ class Game_Replay {
     }
 
     this.currentRound -= 1;
-    this.startRound();
+    this.startCurrentRound();
   }
 
 }

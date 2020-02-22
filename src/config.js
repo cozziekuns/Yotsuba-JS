@@ -16,7 +16,17 @@ const GAME_INFO_TEXT_STYLE = new PIXI.TextStyle({
   fontWeight: 'bold'
 });
 
+const VOICE_TEXT_STYLE = new PIXI.TextStyle({
+  fill: 'white',
+  fontFamily: 'Courier New',
+  fontWeight: 'bold',
+  fontSize: 60,
+  stroke: 'black',
+  strokeThickness: 4
+});
+
 const WIND_ROTATION_TEXT = ['東', '南', '西', '北'];
+const VOICE_TEXT = ['リーチ', 'ロン', 'ツモ', 'チー', 'ポン', 'カン'];
 
 const REPEAT_INITIAL_TICK = 300;
 const REPEAT_TICK = 50;

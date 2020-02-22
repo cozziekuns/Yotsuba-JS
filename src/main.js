@@ -37,7 +37,7 @@ class Game_Application {
 
   run() {
     this.createContext();
-    this.replay.startRound();
+    this.replay.startCurrentRound();
     this.createSprites();
     this.updateSprites();
   }
@@ -119,6 +119,7 @@ class Game_Application {
     this.createDiscardContainers();
     this.createRoundInfoContainer();
     this.createCallContainers();
+    this.createVoiceSprites();
     this.createButtonSprites();
   }
 
@@ -162,6 +163,17 @@ class Game_Application {
     this.context.stage.addChild(this.roundInfoContainer);
   }
   
+  createVoiceSprites() {
+    this.voiceSprites = [];
+
+    this.replay.actors.forEach((actor, index) => {
+      const voiceSprite = new Sprite_Voice(index, actor);
+
+      this.voiceSprites.push(voiceSprite);
+      this.context.stage.addChild(voiceSprite);
+    });
+  }
+
   // TODO: Clean this up... eventually...
   createButtonSprites() {
     this.forwardButton = new PIXI.Text('>>');
@@ -212,6 +224,7 @@ class Game_Application {
     this.updateDiscardContainers();
     this.updateCallContainers();
     this.updateRoundInfoContainer();
+    this.updateVoiceSprites();
   }
 
   updateHandContainers() {
@@ -228,6 +241,10 @@ class Game_Application {
 
   updateRoundInfoContainer() {
     this.roundInfoContainer.update();
+  }
+
+  updateVoiceSprites() {
+    this.voiceSprites.forEach(sprite => sprite.update());
   }
 
   //---------------------------------------------------------------------------
