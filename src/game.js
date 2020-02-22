@@ -142,6 +142,18 @@ class Game_Actor {
     this.voice = -1;
   }
 
+  // TODO: Figure out where this goes
+  getCallVoice(callType) {
+    switch(callType) {
+      case 'chi':
+        return 3;
+      case 'pon':
+        return 4;
+      case 'kakan', 'minkan', 'ankan':
+        return 5;
+    }
+  }
+
   refresh() {
     this.discards = [];
   }
@@ -163,8 +175,9 @@ class Game_Actor {
     this.voice = -1;
   }
 
-  performCall(mentsu, target) {
+  performCall(mentsu, target, callType) {
     this.hand.performCall(mentsu, target);
+    this.voice = getCallVoice(callType);
   }
 
   performRiichiCall() {
@@ -182,7 +195,7 @@ class Game_Actor {
     this.hasDrawnTile = false;
   }
 
-  rewindDiscard(tile, drawnTile) {
+  rewindDiscard(tile, lastAction) {
     const discardTile = this.discards.pop();
 
     if (discardTile !== tile) {
@@ -191,18 +204,36 @@ class Game_Actor {
 
     this.hand.drawTile(tile);
 
-    if (drawnTile !== null) {
-      this.hand.sortWithDrawnTile(drawnTile);
+    if (lastAction.action_type === 'draw') {
+      this.hand.sortWithDrawnTile(lastAction.data.tile);
       this.hasDrawnTile = true;
     } else {
       this.hand.sortTiles();
       this.hasDrawnTile = false;
     }
+
+    switch (lastAction.action_type) {
+      case 'call':
+        this.voice = getCallVoice(lastAction.data.callType);
+        break;
+      case 'riichi_call':
+        this.voice = 0;
+        break;
+      default:
+        this.voice = -1;
+    }
+  }
+
+  rewindCall() {
+    this.voice = -1;
+
+    return this.hand.rewindLastCall();
   }
 
   rewindRiichiCall() {
     this.riichiStep = 0;
     this.riichiIndex = -1;
+    this.voice = -1;
   }
 
   rewindRiichiSuccess() {
@@ -239,18 +270,6 @@ class Game_Round {
     const remainder = (actor - this.round) % 4;
 
     return (remainder < 0 ? remainder + 4 : remainder);
-  }
-
-  getLastDrawAction() {
-    if (this.actions.length > 0) {
-      const previousAction = this.actions[this.actions.length - 1];
-
-      if (previousAction.action_type == 'draw') {
-        return previousAction;
-      }
-    }
-
-    return null;
   }
 
   performCurrentAction() {
@@ -342,21 +361,10 @@ class Game_Round {
     this.actors[action.actor].performCall(
       action.data.mentsu,
       action.data.target,
+      action.data.callType
     )
 
     this.actors[action.data.target].discards.pop();
-
-    switch(action.data.callType) {
-      case 'chi':
-        this.actors[action.actor].voice = 3;
-        break;
-      case 'pon':
-        this.actors[action.actor].voice = 4;
-        break;
-      case 'kakan', 'minkan', 'ankan':
-        this.actors[action.actor].voice = 5;
-        break;
-    }
   }
 
   performRiichiCall(action) {
@@ -383,12 +391,12 @@ class Game_Round {
   rewindDiscardAction(action) {
     this.actors[action.actor].rewindDiscard(
       action.data.tile,
-      action.data.drawnTile,
+      action.data.lastAction,
     );
   }
 
   rewindCallAction(action) {
-    const tile = this.actors[action.actor].hand.rewindLastCall();
+    const tile = this.actors[action.actor].rewindCall();
 
     this.actors[action.data.target].discards.push(tile);
   }
