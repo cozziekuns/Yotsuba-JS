@@ -177,7 +177,7 @@ class Game_Actor {
 
   performCall(mentsu, target, callType) {
     this.hand.performCall(mentsu, target);
-    this.voice = getCallVoice(callType);
+    this.voice = this.getCallVoice(callType);
   }
 
   performRiichiCall() {
@@ -214,7 +214,7 @@ class Game_Actor {
 
     switch (lastAction.action_type) {
       case 'call':
-        this.voice = getCallVoice(lastAction.data.callType);
+        this.voice = this.getCallVoice(lastAction.data.callType);
         break;
       case 'riichi_call':
         this.voice = 0;
