@@ -10,7 +10,7 @@ class Parser_TenhouGame {
   }
 
   parseLog() {
-    let nodes = this.xmlDocument.getElementsByTagName('mjloggm')[0].childNodes;
+    const nodes = this.xmlDocument.getElementsByTagName('mjloggm')[0].childNodes;
     nodes.forEach(node => this.parseNode(node));
 
     return this.replay;
@@ -18,6 +18,9 @@ class Parser_TenhouGame {
 
   parseNode(node) {
     switch(node.nodeName) {
+      case 'UN':
+        this.parseUnNode(node);
+        break;
       case 'INIT':
         this.parseInitNode(node);
         break;
@@ -39,18 +42,30 @@ class Parser_TenhouGame {
     }
   }
 
+  parseUnNode(node) {
+    const dan_ranks = node.attributes['dan'].value.split(',').map(s => Number(s));
+    const ratings = node.attributes['rate'].value.split(',').map(s => Number(s));
+
+    for (let i = 0; i < 4; i++) {
+      const actor = this.replay.actors[i];
+
+      actor.name = decodeURI(node.attributes['n' + String(i)].value);
+      actor.dan = dan_ranks[i];
+      actor.rating = ratings[i]
+    }
+  }
+
   parseInitNode(node) {
     const seed = node.attributes['seed'].value.split(',').map(s => Number(s));
 
-    const round = new Game_Round(this.replay, seed[0], seed[1]);
+    const round = new Game_Round(this.replay.actors, seed[0], seed[1]);
+    
     round.riibou = seed[2];
     round.dora[0] = seed[5];
     round.points = node.attributes['ten'].value.split(',').map(s => Number(s) * 100);
 
     for (let i = 0; i < 4; i++) {
-      const tiles = node.attributes['hai' + String(i)].value.split(',').map(s => Number(s));
-
-      round.hands[i].refreshHaipai(tiles);
+      round.haipai[i] = node.attributes['hai' + String(i)].value.split(',').map(s => Number(s));
     }
 
     this.replay.addRound(round);
@@ -74,7 +89,8 @@ class Parser_TenhouGame {
     const actor = node.nodeName.charCodeAt(0) - 'D'.charCodeAt();
     const tile = Number(node.nodeName.match(/\d+/)[0]);
 
-    const drawnTile = currentRound.getLastDrawAction().data.tile;
+    const lastDrawnAction = currentRound.getLastDrawAction();
+    const drawnTile = (lastDrawnAction ? lastDrawnAction.data.tile : null);
 
     const action = new Game_Action('discard', actor, {'tile': tile, 'drawnTile': drawnTile});
     currentRound.actions.push(action);

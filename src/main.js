@@ -37,6 +37,7 @@ class Game_Application {
 
   run() {
     this.createContext();
+    this.replay.startRound();
     this.createSprites();
     this.updateSprites();
   }
@@ -124,8 +125,8 @@ class Game_Application {
   createHandContainers() {
     this.handContainers = [];
 
-    this.replay.getCurrentRound().hands.forEach(hand => {
-      const handContainer = new Container_Hand(hand);
+    this.replay.actors.forEach((actor, index) => {
+      const handContainer = new Container_Hand(index, actor);
 
       this.handContainers.push(handContainer);
       this.context.stage.addChild(handContainer);
@@ -135,22 +136,19 @@ class Game_Application {
   createDiscardContainers() {
     this.discardContainers = [];
 
-    for (let i = 0; i < 4; i++) {
-      const discardArray = this.replay.getCurrentRound().discards[i];
-      const riichiIndex = this.replay.getCurrentRound().riichiIndex;
-
-      const discardContainer = new Container_Discard(i, discardArray, riichiIndex);
+    this.replay.actors.forEach((actor, index) => {
+      const discardContainer = new Container_Discard(index, actor);
 
       this.discardContainers.push(discardContainer);
       this.context.stage.addChild(discardContainer);
-    }
+    });
   }
 
   createCallContainers() {
     this.callContainers = [];
 
-    this.replay.getCurrentRound().hands.forEach(hand => {
-      const callContainer = new Container_Call(hand);
+    this.replay.actors.forEach((actor, index) => {
+      const callContainer = new Container_Call(index, actor);
 
       this.callContainers.push(callContainer);
       this.context.stage.addChild(callContainer);
@@ -160,7 +158,7 @@ class Game_Application {
   createRoundInfoContainer() {
     const round = this.replay.getCurrentRound();
 
-    this.roundInfoContainer = new Container_RoundInfo(round);
+    this.roundInfoContainer = new Container_RoundInfo(round, this.replay.actors);
     this.context.stage.addChild(this.roundInfoContainer);
   }
   
@@ -237,23 +235,8 @@ class Game_Application {
   //---------------------------------------------------------------------------
 
   refreshSprites() {
-    this.refreshHandContainers();
-    this.refreshDiscardContainers();
     this.refreshRoundInfoContainer();
     this.updateSprites();
-  }
-
-  refreshHandContainers() {
-    this.handContainers.forEach((container, index) => {
-      container.hand = this.replay.getCurrentRound().hands[index];
-    });
-  }
-
-  refreshDiscardContainers() {
-    this.discardContainers.forEach((container, index) => {
-      container.discards = this.replay.getCurrentRound().discards[index];
-      container.riichiIndex = this.replay.getCurrentRound().riichiIndex;
-    });
   }
 
   refreshRoundInfoContainer() {

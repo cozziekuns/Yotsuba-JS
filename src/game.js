@@ -96,10 +96,9 @@ class Game_Hand {
   }
 
   rewindLastCall() {
-    // TODO: Special casing for ankan
+    // TODO: Special casing for kans
     const lastCall = this.calls.pop();
 
-    // TODO: figure out this logic for kans
     const callee_rel = (4 + lastCall.target - this.actor) % 4;
     const tileIndex = (callee_rel - 1) % 2;
 
@@ -119,13 +118,97 @@ class Game_Hand {
 }
 
 //=============================================================================
+// ** Game_Actor
+//=============================================================================
+
+class Game_Actor {
+
+  constructor(index) {
+    this.index = index;
+
+    this.name = '';
+    this.dan = 0;
+    this.rating = 0;
+
+    this.points = 25000;
+
+    this.riichiStep = 0;
+    this.riichiIndex = -1;
+
+    this.hand = new Game_Hand(this);
+    this.discards = [];
+  }
+
+  refresh() {
+    this.discards = [];
+  }
+
+  drawTile(tile) {
+    this.hand.drawTile(tile);
+  }
+
+  discardTile(tile) {
+    this.hand.discardTile(tile);
+    this.discards.push(tile);
+
+    if (this.riichiStep === 1) {
+      this.riichiIndex = this.discards.length - 1;
+    }
+  }
+
+  performCall(mentsu, target) {
+    this.hand.performCall(mentsu, target);
+  }
+
+  performRiichiCall() {
+    this.riichiStep = 1;
+  }
+
+  performRiichiSuccess() {
+    this.riichiStep = 2;
+    this.points -= 1000;
+  }
+
+  rewindDraw(tile) {
+    this.hand.discardTile(tile);
+  }
+
+  rewindDiscard(tile, drawnTile) {
+    const discardTile = this.discards.pop();
+
+    if (discardTile !== tile) {
+      console.log('DEBUG: This should never happen.');
+    }
+
+    this.hand.drawTile(tile);
+
+    if (drawnTile) {
+      this.hand.sortWithDrawnTile(drawnTile);
+    } else {
+      this.hand.sortTiles();
+    }
+  }
+
+  rewindRiichiCall() {
+    this.riichiStep = 0;
+    this.riichiIndex = -1;
+  }
+
+  rewindRiichiSuccess() {
+    this.riichiStep = 1;
+    this.points += 1000;
+  }
+
+}
+
+//=============================================================================
 // ** Game_Round
 //=============================================================================
 
 class Game_Round {
 
-  constructor(replay, round, homba) {
-    this.replay = replay;
+  constructor(actors, round, homba) {
+    this.actors = actors;
 
     this.round = round;
     this.homba = homba;
@@ -134,34 +217,29 @@ class Game_Round {
     this.points = [];
 
     this.wall = [];
-    this.riichiSteps = [0, 0, 0, 0];
-    this.riichiIndex = [-1, -1, -1, -1];
+    this.haipai = [null, null, null, null];
 
     this.actions = [];
     this.currentAction = 0;
     this.tilesLeft = 70;
-
-    this.initHandsAndDiscards();
   }
 
   initHandsAndDiscards() {
-    this.hands = [];
-    this.discards = [];
     
-    for (let i = 0; i < 4; i++) {
-      this.hands.push(new Game_Hand(i));
-      this.discards.push([]);
-    }
   }
 
   getActorWind(actor) {
-    return (actor + this.round) % 4;
+    const remainder = (actor - this.round) % 4;
+
+    return (remainder < 0 ? remainder + 4 : remainder);
   }
 
   getLastDrawAction() {
-    for (let i = this.actions.length - 1; i >= 0; i--) {
-      if (this.actions[i].action_type == 'draw') {
-        return this.actions[i];
+    if (this.actions.length > 1) {
+      const previousAction = this.actions[this.actions.length - 2];
+
+      if (previousAction.action_type == 'draw') {
+        return previousAction;
       }
     }
 
@@ -236,71 +314,63 @@ class Game_Round {
 
   performDrawAction(action) {
     this.wall.shift();
-    this.hands[action.actor].drawTile(action.data.tile);
+    this.actors[action.actor].drawTile(action.data.tile);
 
     this.tilesLeft -= 1;
   }
 
-  performDiscardAction(action) {
+  performDiscardAction(action) {    
     const tile = action.data.tile;
 
-    this.hands[action.actor].discardTile(tile);
-    this.discards[action.actor].push(tile);
-
-    if (this.riichiSteps[action.actor] === 1) {
-      this.riichiIndex[action.actor] = this.discards[action.actor].length - 1;
-    }
+    this.actors[action.actor].discardTile(tile);
   }
 
   performCallAction(action) {
-    this.hands[action.actor].performCall(
+    this.actors[action.actor].performCall(
       action.data.mentsu,
       action.data.target,
-    );
+    )
 
-    this.discards[action.data.target].pop();
+    this.actors[action.data.target].discards.pop();
     // TODO: do something with action.callType
   }
 
   performRiichiCall(action) {
-    this.riichiSteps[action.actor] = 1;
+    this.actors[action.actor].performRiichiCall();
   }
 
   performRiichiSuccess(action) {
-    this.riichiSteps[action.actor] = 2;
-    this.points[action.actor] -= 1000;
+    this.actors[action.actor].performRiichiSuccess();
   }
 
   rewindDrawAction(action) {
     const tile = action.data.tile;
 
     this.wall.unshift(tile);
-    this.hands[action.actor].discardTile(tile);
+    this.actors[action.actor].rewindDraw(tile);
 
     this.tilesLeft += 1;
   }
 
+  rewindDiscardAction(action) {
+    this.actors[action.actor].rewindDiscard(
+      action.data.tile,
+      action.data.drawnTile,
+    );
+  }
+
   rewindCallAction(action) {
-    const tile = this.hands[action.actor].rewindLastCall();
+    const tile = this.actors[action.actor].hand.rewindLastCall();
 
     this.discards[action.data.target].push(tile);
   }
 
-  rewindDiscardAction(action) {
-    this.discards[action.actor].pop();
-
-    this.hands[action.actor].drawTile(action.data.tile);
-    this.hands[action.actor].sortWithDrawnTile(action.data.drawnTile);
-  }
-
   rewindRiichiCall(action) {
-    this.riichiSteps[action.actor] = 0;
-    this.riichiIndex[action.actor] = -1;
+    this.actors[action.actor].rewindRiichiCall();
   }
 
   rewindRiichiSuccess(action) {
-    this.riichiSteps[action.actor] = 1;
-    this.points[action.actor] += 1000;
+    this.actors[action.actor].rewindRiichiSuccess();
   }
 
 }
@@ -313,7 +383,26 @@ class Game_Replay {
   
   constructor() {
     this.rounds = [];
-    this.currentRound = 2;
+    this.currentRound = 0;
+
+    this.initializeActors();
+  }
+
+  initializeActors() {
+    this.actors = [];
+
+    for (let i = 0; i < 4; i++) {
+      this.actors.push(new Game_Actor(i));
+    }
+  }
+
+  startRound() {
+    const round = this.rounds[this.currentRound];
+
+    this.actors.forEach((actor, index) => {
+      actor.points = round.points[index];
+      actor.hand.refreshHaipai(round.haipai[index]);
+    });
   }
 
   getCurrentRound() {
@@ -334,6 +423,7 @@ class Game_Replay {
     }
 
     this.currentRound += 1;
+    this.startRound();
   }
 
   gotoPreviousRound() {
@@ -342,6 +432,7 @@ class Game_Replay {
     }
 
     this.currentRound -= 1;
+    this.startRound();
   }
 
 }
