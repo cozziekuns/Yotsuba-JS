@@ -22,7 +22,7 @@ const VOICE_TEXT_STYLE = new PIXI.TextStyle({
   fontWeight: 'bold',
   fontSize: 60,
   stroke: 'black',
-  strokeThickness: 4
+  strokeThickness: 6
 });
 
 const WIND_ROTATION_TEXT = ['東', '南', '西', '北'];
