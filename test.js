@@ -103,7 +103,7 @@ function calcMentsuConfigurations(hand) {
       }
 
       // Kanchan
-      if (tileValue(currentHand[0]) < 9 && currentHand.includes(currentHand[0] + 2)) {
+      if (tileValue(currentHand[0]) < 8 && currentHand.includes(currentHand[0] + 2)) {
         const newHand = currentHand.slice(1, currentHand.length);
         newHand.splice(newHand.indexOf(currentHand[0] + 2), 1);
 
