@@ -123,6 +123,39 @@ function calcMentsuConfigurations(hand) {
   return configurations;
 }
 
+function getOutsForConfiguration(configuration) {
+  const outs = [];
+
+  const atamaCandidates = configuration.filter(
+    group => group.length === 2 && group[0] === group[1]
+  );
+
+  const mentsu = configuration.filter(group => group.length === 3);
+  const taatsu = configuration.filter(group => group.length === 2);
+  const floatTiles = configuration.filter(group => group.length === 1);
+
+  if (atamaCandidates.length === 1) {
+    // Atama is locked and we cannot treat it as a taatsu.
+    taatsu.splice(taatsu.indexOf(atamaCandidates[0]), 1);
+  } else if (atamaCandidates.length === 0) {
+    // Any of the float tiles can become a head.
+    outs.concat(floatTiles.flat());
+  }
+
+  taatsu.forEach(group => outs.concat(getOutsForShape(group)));
+
+  if (mentsu.length + taatsu.length < 4) {
+    floatTiles.forEach(group => {
+      const tile = group[0];
+
+      outs.push(tile);
+      // TODO: Add outs for tiles.
+    });
+  }
+
+  return [...new Set(outs)];
+}
+
 let hand = [1, 2, 6, 7, 10, 11, 15, 16, 19, 20, 24, 25, 26];
 
 const hrStart = process.hrtime();
