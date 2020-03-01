@@ -1,36 +1,31 @@
+//----------------------------------------------------------------------------
+// * Utility Methods
+//----------------------------------------------------------------------------
+
 function tileValue(tile) {
-  return (tile >= 27 ? 10 : (tile % 9 + 1));
+  return ((tile < 0 || tile >= 27) ? 10 : (tile % 9 + 1));
 }
 
 function getAtamaFromConfiguration(configuration) {
   let atama = undefined; 
 
   for (let i = 0; i < configuration.length; i++) {
-    const group = configuration[i];
+    const shape = configuration[i];
 
-    if (group.length === 2 && group[0] === group[1]) {
-      atama = group;
+    if (shape.length === 2 && shape[0] === shape[1]) {
+      atama = shape;
       break;
-    } else if (group.length === 1) {
-      atama = group;
+    } else if (shape.length === 1) {
+      atama = shape;
     }
   }
 
   return atama;
 }
 
-function calcConfigurationShanten(configuration) {
-  const atama = getAtamaFromConfiguration(configuration);
-
-  const configurationWithoutAtama = configuration.slice();
-  configurationWithoutAtama.splice(configuration.indexOf(atama), 1);
-
-  const groupsToUse = configurationWithoutAtama.sort(
-    (a, b) => b.length - a.length
-  ).slice(0, 4);
-
-  return 9 - atama.length - groupsToUse.reduce((a, b) => a + b.length - 1, 0);
-}
+//----------------------------------------------------------------------------
+// * Mentsu Configuration Methods
+//----------------------------------------------------------------------------
 
 function calcMentsuConfigurations(hand) {
   const configurations = [];
@@ -48,9 +43,11 @@ function calcMentsuConfigurations(hand) {
       // configuration.
       if (hasAtama) {
         // Remove all elements that do not have an empty hand from the queue.
-        queue = queue.filter(element => element[0].length === 0);
-
-        configurations.push(oldHand);
+        return [oldHand].concat(
+          queue
+            .filter(element => element[0].length === 0 && element[2])
+            .map(element => element[1])
+        );
       }
 
       continue;
@@ -120,53 +117,116 @@ function calcMentsuConfigurations(hand) {
     ]);
   }
 
-  return configurations;
+  throw 'Invalid input.';
 }
+
+//-----------------------------------------------------------------------------
+// * Shanten Methods
+//-----------------------------------------------------------------------------
+
+function calcConfigurationShanten(configuration) {
+  const atama = getAtamaFromConfiguration(configuration);
+
+  const configurationWithoutAtama = configuration.slice();
+  configurationWithoutAtama.splice(configuration.indexOf(atama), 1);
+
+  const shapesToUse = configurationWithoutAtama.sort(
+    (a, b) => b.length - a.length
+  ).slice(0, 4);
+
+  return 9 - atama.length - shapesToUse.reduce((a, b) => a + b.length - 1, 0);
+}
+
+function getMinShantenConfigurations(configurations) {
+  const configurationShanten = configurations.map(
+    configuration => calcConfigurationShanten(configuration)
+  );
+
+  const shanten = Math.min(...configurationShanten);
+
+  return configurations.filter(
+    (_, index) => configurationShanten[index] === shanten
+  );
+}
+
+//-----------------------------------------------------------------------------
+// * Ukeire Methods
+//-----------------------------------------------------------------------------
 
 function getOutsForConfiguration(configuration) {
   const outs = [];
 
   const atamaCandidates = configuration.filter(
-    group => group.length === 2 && group[0] === group[1]
+    shape => shape.length === 2 && shape[0] === shape[1]
   );
 
-  const mentsu = configuration.filter(group => group.length === 3);
-  const taatsu = configuration.filter(group => group.length === 2);
-  const floatTiles = configuration.filter(group => group.length === 1);
+  const mentsu = configuration.filter(shape => shape.length === 3);
+  const taatsu = configuration.filter(shape => shape.length === 2);
+  const floatTiles = configuration.filter(shape => shape.length === 1);
 
   if (atamaCandidates.length === 1) {
     // Atama is locked and we cannot treat it as a taatsu.
     taatsu.splice(taatsu.indexOf(atamaCandidates[0]), 1);
   } else if (atamaCandidates.length === 0) {
     // Any of the float tiles can become a head.
-    outs.concat(floatTiles.flat());
+    outs.push(...floatTiles.map(shape => shape[0]));
   }
 
-  taatsu.forEach(group => outs.concat(getOutsForShape(group)));
+  taatsu.forEach(shape => outs.push(...getOutsForShape(shape)));
 
   if (mentsu.length + taatsu.length < 4) {
-    floatTiles.forEach(group => {
-      const tile = group[0];
-
-      outs.push(tile);
-      // TODO: Add outs for tiles.
-    });
+    floatTiles.forEach(shape => outs.push(...getOutsForShape(shape)));
   }
 
   return [...new Set(outs)];
+}
+
+function getOutsForShape(shape) {
+  const outs = [];
+
+  if (shape.length === 1) {
+    // Tanki
+    for (let i = -2; i <= 2; i++) {
+      if (tileValue(shape[0] + i) === tileValue(shape) + i) {
+        outs.push(shape[0] + i);
+      }
+    }
+  } else if (shape.length === 2) {
+    if (shape[0] === shape[1]) {
+      // Toitsu
+      outs.push(shape[0]);
+    } else if (shape[0] === shape[1] - 1) {
+      // Ryanmen / Penchan
+      if (tileValue(shape[0]) > 1) {
+        outs.push(shape[0] - 1);
+      }
+
+      if (tileValue(shape[1]) < 9) {
+        outs.push(shape[1] + 1);
+      }
+    } else if (shape[0] === shape[1] - 2) {
+      // Kanchan
+      outs.push(shape[0] + 1);
+    }
+  }
+
+  return outs;
 }
 
 let hand = [1, 2, 6, 7, 10, 11, 15, 16, 19, 20, 24, 25, 26];
 
 const hrStart = process.hrtime();
 
-for (let i = 0; i < 1000; i++) {
-  const configurations = calcMentsuConfigurations(hand);
+const configurations = calcMentsuConfigurations(hand);
+const minShantenConfigurations = getMinShantenConfigurations(configurations);
 
-  configurations.forEach(configuration => {
-    calcConfigurationShanten(configuration);
-  });
-}
+let outsForHand = [];
+
+minShantenConfigurations.forEach(configuration => 
+  outsForHand.push(...getOutsForConfiguration(configuration))
+);
+
+outsForHand = [...new Set(outsForHand)].sort((a, b) => a - b);
 
 const hrEnd = process.hrtime(hrStart);
 console.log(hrEnd[0], hrEnd[1] / 1000000);
