@@ -153,6 +153,16 @@ function getMinShantenConfigurations(configurations) {
 // * Ukeire Methods
 //-----------------------------------------------------------------------------
 
+function getOutsForConfigurationList(configurationList) {
+  const outs = [];
+  
+  configurationList.forEach(configuration => 
+    outs.push(...getOutsForConfiguration(configuration))
+  );
+
+  return [...new Set(outs)];
+}
+
 function getOutsForConfiguration(configuration) {
   const outs = [];
 
@@ -179,6 +189,46 @@ function getOutsForConfiguration(configuration) {
   }
 
   return [...new Set(outs)];
+}
+
+function getOutsMapForConfiguration(configuration) {
+  const outsMap = {};
+
+  const atamaCandidates = configuration.filter(
+    shape => shape.length === 2 && shape[0] === shape[1]
+  );
+
+  const mentsu = configuration.filter(shape => shape.length === 3);
+  const taatsu = configuration.filter(shape => shape.length === 2);
+  const floatTiles = configuration.filter(shape => shape.length === 1);
+
+  if (atamaCandidates.length === 1) {
+    // Atama is locked and we cannot treat it as a taatsu.
+    taatsu.splice(taatsu.indexOf(atamaCandidates[0]), 1);
+  } else if (atamaCandidates.length === 0) {
+    // Any of the float tiles can become a head.
+    floatTiles.forEach(shape => addToOutsMap(outsMap, shape[0], shape));
+  }
+
+  taatsu.forEach(shape => {
+    getOutsForShape(shape).forEach(tile => addToOutsMap(outsMap, tile, shape))
+  });
+  
+  if (mentsu.length + taatsu.length < 4) {
+    floatTiles.forEach(shape => {
+      getOutsForShape(shape).forEach(tile => addToOutsMap(outsMap, tile, shape));
+    });
+  }
+
+  return outsMap;
+}
+
+function addToOutsMap(outsMap, out, shape) {
+  if (!(out in outsMap)) {
+    outsMap[out] = [];
+  }
+
+  outsMap[out].push(shape);
 }
 
 function getOutsForShape(shape) {
@@ -213,24 +263,137 @@ function getOutsForShape(shape) {
   return outs;
 }
 
+function getNewConfigurationsFromOut(configuration, outsMap, wall, tile) {
+  const configurations = [];
+  
+  outsMap[tile].forEach(shape => {
+    const newConfiguration = configuration.slice();
+
+    newConfiguration.splice(newConfiguration.indexOf(shape), 1);
+    newConfiguration.push(shape.concat([tile]).sort((a, b) => a - b));
+    removeUnusedShape(newConfiguration, wall);
+
+    configurations.push(newConfiguration);
+  });
+
+  return configurations;
+}
+
+function removeUnusedShape(configuration, wall) {
+  // TODO: Remove the taatsu with the lowest utility
+  configuration.sort((a, b) => b.length - a.length).pop();
+}
+
+function calcDrawChance(wallTiles, ukeire, drawsLeft) {
+  let ryuukyokuChance = 1;
+
+  for (let i = 0; i < drawsLeft; i++) {
+    ryuukyokuChance *= wallTiles - ukeire - i;
+    ryuukyokuChance /= wallTiles - i;
+  }
+
+  return 1 - ryuukyokuChance;
+}
+
+function getNewConfigurationsForOut(configurationList, wall, out) {
+  const newConfigurations = [];
+
+  // TODO: Figure out how we can do this without creating the outsMap.
+  configurationList.forEach(configuration => {
+    const outsMap = getOutsMapForConfiguration(configuration, out);
+
+    newConfigurations.push(
+      ...getNewConfigurationsFromOut(configuration, outsMap, wall, out)
+    );
+  });
+
+  return newConfigurations;
+}
+
+//-----------------------------------------------------------------------------
+// * Simulate Hands
+//-----------------------------------------------------------------------------
+
+function simulate(
+  wall,
+  wallTiles,
+  configurationList,
+  shanten,
+  endShanten,
+  drawsLeft,
+) {
+  const outs = getOutsForConfigurationList(configurationList);
+  const ukeire = outs.reduce((total, out) => total + wall[out], 0);
+
+  if (shanten === endShanten) {
+    return calcDrawChance(wallTiles, ukeire, drawsLeft);
+  }
+
+  let agariChance = 0;
+  let ryuukyokuChance = 1;
+
+  for (let i = 0; i < drawsLeft - shanten; i++) {
+    const drawChance = calcDrawChance(wallTiles - i, ukeire, 1);
+    const advanceChance = ryuukyokuChance * drawChance;
+
+    for (let j = 0; j < outs.length; j++) {
+      const out = outs[j];
+
+      if (wall[out] === 0) {
+        continue;
+      }
+
+      const newWall = {};
+      Object.assign(newWall, wall);
+
+      newWall[out] -= 1;
+
+      const newConfigurationList = getNewConfigurationsForOut(configurationList, newWall, out);
+      const newAgariChance = simulate(
+        newWall,
+        wallTiles - i - 1,
+        newConfigurationList,
+        shanten - 1,
+        endShanten,
+        drawsLeft - i - 1,
+      );
+
+      agariChance += (wall[out] / ukeire) * advanceChance * newAgariChance;
+    }
+
+    ryuukyokuChance *= (1 - drawChance); 
+  }
+
+  return agariChance;
+}
+
 //=============================================================================
 // ** Main
 //=============================================================================
 
-let hand = [1, 2, 6, 7, 10, 11, 15, 16, 19, 20, 24, 25, 26];
+const wall = {}
+
+for (let i = 0; i < 34; i++) {
+  wall[i] = 4;
+}
+
+// 22m 2356p 1888999s
+let hand = [1, 1, 10, 11, 13, 14, 18, 25, 25, 25, 26, 26, 26];
+
+hand.forEach(tile => wall[tile] -= 1);
 
 const hrStart = process.hrtime();
 
 const configurations = calcMentsuConfigurations(hand);
 const minShantenConfigurations = getMinShantenConfigurations(configurations);
 
-let outsForHand = [];
+for (let i = 18; i > 0; i--) {
+  const drawsLeft = i;
+  const wallTiles = 123 - (18 - drawsLeft);
+  
+  console.log(simulate(wall, wallTiles, minShantenConfigurations, 1, 1, drawsLeft));
+}
 
-minShantenConfigurations.forEach(configuration => 
-  outsForHand.push(...getOutsForConfiguration(configuration))
-);
-
-outsForHand = [...new Set(outsForHand)].sort((a, b) => a - b);
 
 const hrEnd = process.hrtime(hrStart);
 console.log(hrEnd[0], hrEnd[1] / 1000000);
