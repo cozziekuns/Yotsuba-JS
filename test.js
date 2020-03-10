@@ -1,44 +1,195 @@
-// TODO: Clean up all the methods now that we're 4 groups + 1 pair.
+/* TODO List:
+  - Memoize the Shoubu calculations
+  - Customizable Dora
+  - Chiitoi and Kokushi
+  - Clean up code, turn it into a library
+*/
 
 //----------------------------------------------------------------------------
 // * Utility Methods
 //----------------------------------------------------------------------------
 
-function flattenConfiguration(configuration) {
-  const result = [];
-
-  configuration.forEach(shape => result.push(...shape));
-
-  return result;
-}
-
 function addToBucketMap(bucketMap, key, value) {
-  if (!(key in bucketMap)) {
-    bucketMap[key] = [];
+  if (!bucketMap.has(key)) {
+    bucketMap.set(key, []);
   }
 
-  bucketMap[key].push(value);
+  bucketMap.get(key).push(value);
 }
 
 function tileValue(tile) {
   return ((tile < 0 || tile >= 27) ? 10 : (tile % 9 + 1));
 }
 
-function getAtamaFromConfiguration(configuration) {
-  let atama = undefined; 
+function getOutsForShape(shape) {
+  const outs = [];
 
-  for (let i = 0; i < configuration.length; i++) {
-    const shape = configuration[i];
+  if (shape.length === 1) {
+    // Tanki
+    for (let i = -2; i <= 2; i++) {
+      if (tileValue(shape[0] + i) === tileValue(shape) + i) {
+        outs.push(shape[0] + i);
+      }
+    }
+  } else if (shape.length === 2) {
+    if (shape[0] === shape[1]) {
+      // Toitsu
+      outs.push(shape[0]);
+    } else if (shape[0] === shape[1] - 1) {
+      // Ryanmen / Penchan
+      if (tileValue(shape[0]) > 1) {
+        outs.push(shape[0] - 1);
+      }
 
-    if (shape.length === 2 && shape[0] === shape[1]) {
-      atama = shape;
-      break;
-    } else if (shape.length === 1) {
-      atama = shape;
+      if (tileValue(shape[1]) < 9) {
+        outs.push(shape[1] + 1);
+      }
+    } else if (shape[0] === shape[1] - 2) {
+      // Kanchan
+      outs.push(shape[0] + 1);
     }
   }
 
-  return atama;
+  return outs;
+}
+
+function calcDrawChance(wallTiles, ukeire, drawsLeft) {
+  let missChance = 1;
+
+  for (let i = 0; i < drawsLeft; i++) {
+    missChance *= wallTiles - ukeire - i;
+    missChance /= wallTiles - i;
+  }
+
+  return 1 - missChance;
+}
+
+//=============================================================================
+// ** ConfigurationNode
+//=============================================================================
+
+class ConfigurationNode {
+
+  constructor(configurationList) {
+    this.configurationList = configurationList;
+    this.shanten = calculateConfigurationShanten(configurationList[0]);
+
+    this.outs = [];
+    this.outsMapList = [];
+    this.children = new Map();
+
+    this.calculateOutsMapList();
+    this.calculateOuts();
+    this.spawnChildren();
+  }
+
+  //--------------------------------------------------------------------------
+  // * Ukeire Calculation
+  //--------------------------------------------------------------------------
+
+  calculateOuts() {
+    const outs = this.outsMapList.reduce(
+      (total, outsMap) => total = total.concat(Array.from(outsMap.keys())),
+      [],
+    );
+
+    this.outs = [...new Set(outs)];
+  }
+
+  calculateOutsMapList() {
+    this.outsMapList = this.configurationList.map(
+      configuration => this.getOutsMapForConfiguration(configuration)
+    );
+  }
+    
+  getOutsMapForConfiguration(configuration) {
+    const outsMap = new Map();
+  
+    const atamaCandidates = configuration.filter(
+      shape => shape.length === 2 && shape[0] === shape[1]
+    );
+  
+    const mentsu = configuration.filter(shape => shape.length === 3);
+    const taatsu = configuration.filter(shape => shape.length === 2);
+    const floatTiles = configuration.filter(shape => shape.length === 1);
+  
+    if (atamaCandidates.length === 1) {
+      taatsu.splice(taatsu.indexOf(atamaCandidates[0]), 1);
+    }
+  
+    taatsu.forEach(shape => {
+      getOutsForShape(shape).forEach(
+        tile => addToBucketMap(outsMap, tile, shape)
+      );
+    });
+    
+    if (mentsu.length + taatsu.length === 4 && atamaCandidates.length === 0) {
+      // When we have four blocks but no atama, floats becoming atama
+      // decreases shanten.
+      floatTiles.forEach(shape => addToBucketMap(outsMap, shape[0], shape));
+    } else if (mentsu.length + taatsu.length < 4) {
+      floatTiles.forEach(shape => {
+        getOutsForShape(shape).forEach(
+          tile => addToBucketMap(outsMap, tile, shape)
+        );
+      });
+    }
+
+    return outsMap;
+  }
+
+  //--------------------------------------------------------------------------
+  // * Spawn Children Nodes
+  //--------------------------------------------------------------------------
+
+  calculateConfigurationListForOut(configuration, outsMap, out) {
+    outsMap.get(out).forEach(shape => {
+      const newConfiguration = configuration.slice();
+
+      newConfiguration.splice(newConfiguration.indexOf(shape), 1);
+      newConfiguration.push(shape.concat(out).sort((a, b) => a - b));
+
+      const tilesToRemove = newConfiguration.filter(shape => shape.length === 1);
+      const blocks = newConfiguration.filter(shape => shape.length > 1);
+      
+      if (blocks.length === 5) {
+        const tile = tilesToRemove[0];
+
+        newConfiguration.splice(newConfiguration.indexOf(tile), 1);
+        addToBucketMap(this.children.get(out), tile[0], newConfiguration);
+      } else {
+        tilesToRemove.forEach(tile => {
+          const configurationWithoutTile = newConfiguration.slice();
+          configurationWithoutTile.splice(configurationWithoutTile.indexOf(tile), 1);
+
+          addToBucketMap(this.children.get(out), tile[0], configurationWithoutTile);
+        });
+      }
+    });
+  }
+
+  spawnChildren() {
+    if (this.shanten === 0) {
+      return;
+    }
+
+    this.outs.forEach(out => this.children.set(out, new Map()));
+
+    this.configurationList.forEach((configuration, index) => {
+      const outsMap = this.outsMapList[index];
+
+      for (let out of outsMap.keys()) {
+        this.calculateConfigurationListForOut(configuration, outsMap, out);
+      }
+    });
+
+    this.children.forEach(childForOut => {
+      childForOut.forEach((configurationList, tileToRemove) => {
+        childForOut.set(tileToRemove, new ConfigurationNode(configurationList));
+      });
+    });
+  }
+
 }
 
 //----------------------------------------------------------------------------
@@ -136,26 +287,19 @@ function calcMentsuConfigurations(hand) {
   throw 'Invalid input.';
 }
 
-//-----------------------------------------------------------------------------
-// * Shanten Methods
-//-----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+// * Shanten Calculation
+//----------------------------------------------------------------------------
 
-function calcConfigurationShanten(configuration) {
-  const atama = getAtamaFromConfiguration(configuration);
+function calculateConfigurationShanten(configuration) {
+  const blocks = configuration.filter(shape => shape.length > 1);
 
-  const configurationWithoutAtama = configuration.slice();
-  configurationWithoutAtama.splice(configuration.indexOf(atama), 1);
-
-  const shapesToUse = configurationWithoutAtama.sort(
-    (a, b) => b.length - a.length
-  ).slice(0, 4);
-
-  return 9 - atama.length - shapesToUse.reduce((a, b) => a + b.length - 1, 0);
+  return 8 - blocks.reduce((a, b) => a + b.length - 1, 0);
 }
 
 function getMinShantenConfigurations(configurations) {
   const configurationShanten = configurations.map(
-    configuration => calcConfigurationShanten(configuration)
+    configuration => calculateConfigurationShanten(configuration)
   );
 
   const shanten = Math.min(...configurationShanten);
@@ -165,291 +309,221 @@ function getMinShantenConfigurations(configurations) {
   );
 }
 
-//-----------------------------------------------------------------------------
-// * Ukeire Methods
-//-----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+// * Simulation Methods
+//----------------------------------------------------------------------------
 
-function getOutsForShape(shape) {
-  const outs = [];
+function getUkeireList(wall, configurationNodes, currentPlayer) {
+  const numPlayers = configurationNodes.length;
+  const ukeireList = new Array(numPlayers).fill(0);
 
-  if (shape.length === 1) {
-    // Tanki
-    for (let i = -2; i <= 2; i++) {
-      if (tileValue(shape[0] + i) === tileValue(shape) + i) {
-        outs.push(shape[0] + i);
-      }
-    }
-  } else if (shape.length === 2) {
-    if (shape[0] === shape[1]) {
-      // Toitsu
-      outs.push(shape[0]);
-    } else if (shape[0] === shape[1] - 1) {
-      // Ryanmen / Penchan
-      if (tileValue(shape[0]) > 1) {
-        outs.push(shape[0] - 1);
-      }
+  const currentPlayerOuts = configurationNodes[currentPlayer].outs;
 
-      if (tileValue(shape[1]) < 9) {
-        outs.push(shape[1] + 1);
-      }
-    } else if (shape[0] === shape[1] - 2) {
-      // Kanchan
-      outs.push(shape[0] + 1);
-    }
-  }
+  for (let i = 0; i < numPlayers; i++) {
+    let outsToAdd;
 
-  return outs;
-}
-
-function getLowestUkeireShape(shapes, wall) {
-  const shapeUkeireList = [];
-
-  shapes.forEach(shape => {
-    const outs = getOutsForShape(shape);
-
-    shapeUkeireList.push(
-      outs.reduce((total, out) => total += wall[out], 0)
-    );
-  });
-
-  const index = shapeUkeireList.indexOf(Math.min(...shapeUkeireList));
-
-  return shapes[index];
-}
-
-function removeUnusedTile(configuration, wall) {
-  const blocks = configuration.filter(shape => shape.length > 1);
-  const floatTiles = configuration.filter(shape => shape.length === 1);
-
-  const atamaCandidates = blocks.filter(
-    shape => shape.length === 2 && shape[0] === shape[1]
-  );
-
-  let shapeToRemove = undefined;
-
-  if (blocks.length > 4) {
-    shapeToRemove = floatTiles[0];
-  } else if (blocks.length === 4 && atamaCandidates.length === 0) {
-    // If we don't have an atama, remove the float that gives us the
-    // least toitsu outs.
-    const floatTilesInWall = floatTiles.map(shape => wall[shape[0]]);
-    const index = floatTilesInWall.indexOf(Math.min(...floatTilesInWall));
-
-    shapeToRemove = floatTiles[index];
-  } else {
-    shapeToRemove = getLowestUkeireShape(floatTiles, wall);
-  }
-
-  configuration.splice(configuration.indexOf(shapeToRemove), 1);
-}
-
-function getOutsFromOutsMapList(outsMapList) {
-  const outs = outsMapList.reduce(
-    (a, b) => a = a.concat(Object.keys(b).map(key => Number(key))),
-    [],
-  );
-
-  return [...new Set(outs)];
-}
-  
-function getOutsMapForConfiguration(configuration) {
-  const outsMap = {};
-
-  const atamaCandidates = configuration.filter(
-    shape => shape.length === 2 && shape[0] === shape[1]
-  );
-
-  const mentsu = configuration.filter(shape => shape.length === 3);
-  const taatsu = configuration.filter(shape => shape.length === 2);
-  const floatTiles = configuration.filter(shape => shape.length === 1);
-
-  if (atamaCandidates.length === 1) {
-    taatsu.splice(taatsu.indexOf(atamaCandidates[0]), 1);
-  }
-
-  taatsu.forEach(shape => {
-    getOutsForShape(shape).forEach(tile => addToBucketMap(outsMap, tile, shape));
-  });
-  
-  if (mentsu.length + taatsu.length === 4 && atamaCandidates.length === 0) {
-    // When we have four blocks but no atama, floats becoming atama
-    // decreases shanten.
-    floatTiles.forEach(shape => addToBucketMap(outsMap, shape[0], shape));
-  } else if (mentsu.length + taatsu.length < 4) {
-    floatTiles.forEach(shape => {
-      getOutsForShape(shape).forEach(tile => addToBucketMap(outsMap, tile, shape));
-    });
-  }
-
-  return outsMap;
-}
-
-function getNewConfigurationsForOut(configuration, outsMap, wall, tile) {;
-  const configurations = [];
-
-  outsMap[tile].forEach(shape => {
-    const newConfiguration = configuration.slice();
-
-    newConfiguration.splice(newConfiguration.indexOf(shape), 1);
-    newConfiguration.push(shape.concat([tile]).sort((a, b) => a - b));
-    removeUnusedTile(newConfiguration, wall);
-
-    configurations.push(newConfiguration);
-  });
-
-  return configurations;
-}
-
-function getNewConfigurationListForOut(configurationList, outsMapList, wall, out) {
-  const newConfigurations = [];
-
-  configurationList.forEach((configuration, index) => {
-    const outsMap = outsMapList[index];
-
-    if (outsMap[out]) {
-      newConfigurations.push(
-        ...getNewConfigurationsForOut(configuration, outsMap, wall, out)
-      );
-    }
-  });
-
-  return newConfigurations;
-}
-
-//-----------------------------------------------------------------------------
-// * Simulate Hands
-//-----------------------------------------------------------------------------
-
-function calcDrawChance(wallTiles, ukeire, drawsLeft) {
-  let ryuukyokuChance = 1;
-
-  for (let i = 0; i < drawsLeft; i++) {
-    ryuukyokuChance *= wallTiles - ukeire - i;
-    ryuukyokuChance /= wallTiles - i;
-  }
-
-  return 1 - ryuukyokuChance;
-}
-
-// TODO: Work out 
-function simulate(
-  wall,
-  wallTiles,
-  configurationList,
-  shanten,
-  endShanten,
-  drawsLeft,
-) {
-  if (shanten - endShanten > drawsLeft) {
-    return 0;
-  }
-
-  const outsMapList = configurationList.map(
-    configuration => getOutsMapForConfiguration(configuration)
-  );
-
-  const outs = getOutsFromOutsMapList(outsMapList);
-  const ukeire = outs.reduce((total, out) => total + wall[out], 0);
-  
-  if (shanten === endShanten) {
-    return calcDrawChance(wallTiles, ukeire, drawsLeft);
-  }
-
-  let agariChance = 0;
-  let ryuukyokuChance = 1;
-
-  // TODO: Figure out how to memoize this, instead of recalculating everything
-  // on every iteration.
-  for (let i = 0; i < drawsLeft - (shanten - endShanten); i++) {
-    const drawChance = calcDrawChance(wallTiles - i, ukeire, 1);
-    const advanceChance = ryuukyokuChance * drawChance;
-
-    for (let j = 0; j < outs.length; j++) {
-      const out = outs[j];
-
-      if (wall[out] === 0) {
+    if (i === currentPlayer) {
+      outsToAdd = currentPlayerOuts; 
+    } else {
+      if (configurationNodes[i].shanten > 0) {
         continue;
       }
 
-      const newWall = {};
-      Object.assign(newWall, wall);
+      const outsSet = new Set(configurationNodes[i].outs);
 
-      newWall[out] -= 1;
-
-      const newConfigurationList = getNewConfigurationListForOut(
-        configurationList,
-        outsMapList,
-        newWall, 
-        out,
-      );
-
-      // Get the best performing set of configuration lists
-      // TODO: There has to be a nicer way to do this...
-      const configurationHash = {};
-
-      newConfigurationList.forEach(configuration => {
-        const tiles = flattenConfiguration(configuration);
-        tiles.sort((a, b) => a - b);
-        
-        addToBucketMap(configurationHash, tiles, configuration);
-      });
-
-      let newAgariChance = -1;
-
-      Object.values(configurationHash).forEach(newConfigurationList => {
-        const configurationListAgariChance = simulate(
-          newWall,
-          wallTiles - i - 1,
-          newConfigurationList,
-          shanten - 1,
-          endShanten,
-          drawsLeft - i - 1,
-        );
-
-        if (configurationListAgariChance > newAgariChance) {
-          newAgariChance = configurationListAgariChance;
-        }
-      });
-
-      agariChance += wall[out] / ukeire * advanceChance * newAgariChance;
+      currentPlayerOuts.forEach(out => outsSet.delete(out));
+      outsToAdd = [...outsSet];
     }
 
-    ryuukyokuChance *= (1 - drawChance); 
+    ukeireList[i] = outsToAdd.reduce((total, out) => total + wall[out], 0);
   }
 
-  return agariChance;
+  return ukeireList;
+}
+
+function getTotalUkeire(wall, configurationNodes) {
+  const totalOuts = configurationNodes.reduce(
+    (total, node) => total = total.concat(node.outs),
+    [],
+  );
+
+  return [...new Set(totalOuts)].reduce((total, out) => total + wall[out], 0);
+}
+
+function getBestConfigurationNodeForOut(
+  wall,
+  wallTiles,
+  candidateConfigurationNodes,
+  drawsLeft, 
+) {
+  if (drawsLeft === 0 || candidateConfigurationNodes.length === 1) {
+    return candidateConfigurationNodes[0];
+  }
+
+  let bestConfigurationNode;
+  let outAgariChance = -1; 
+
+  candidateConfigurationNodes.forEach(configurationNode => {
+    const outAgariChanceForNode = simulateShoubu(
+      wall, 
+      wallTiles,
+      [configurationNode],
+      [drawsLeft],
+      0,
+    );
+
+    if (outAgariChanceForNode > outAgariChance) {
+      outAgariChance = outAgariChanceForNode;
+      bestConfigurationNode = configurationNode;
+    }
+  });
+
+  return bestConfigurationNode;
+}
+
+// TODO: This function is really, really slow right now and needs some 
+// optimization. Either bottom-up DP or top-down memoization.
+function simulateShoubu(
+  wall,
+  wallTiles,
+  configurationNodes,
+  drawsLeft,
+  currentPlayer,
+) {
+  const numPlayers = configurationNodes.length;
+
+  let agariMatrix = new Array(numPlayers ** 2).fill(0);
+
+  if (drawsLeft === 0) {
+    return agariMatrix;
+  }
+
+  const ukeireList = getUkeireList(wall, configurationNodes, currentPlayer);
+  const totalUkeire = getTotalUkeire(wall, configurationNodes);
+
+  const eventChance = calcDrawChance(wallTiles, totalUkeire, 1);
+
+  // TODO: Eventually we should modifying wall for all the different draws...
+  // That might actually be intractable though, makes it really hard to DP.
+  for (let i = 0; i < numPlayers; i++) {
+    const drawChance = calcDrawChance(wallTiles, ukeireList[i], 1);
+
+    if (i === currentPlayer && configurationNodes[i].shanten > 0) {
+      const playerDrawsLeft = Math.ceil(drawsLeft / numPlayers) - 1;
+
+      if (configurationNodes[i].shanten > playerDrawsLeft) {
+        continue;
+      }
+
+      for (let j = 0; j < configurationNodes[i].outs.length; j++) {
+        const out = configurationNodes[i].outs[j];
+
+        if (wall[out] === 0) {
+          continue;
+        }
+
+        const newWall = wall.slice();
+        newWall[out] -= 1;
+
+        // TODO: For now, let's assume that the currentPlayer chooses the 
+        // configuration node that gives them the most HMS win percentage.
+        //
+        // We probably want to add a that restricts the player from 
+        // playing certain outs (i.e. the dora).
+        const newConfigurationNode = getBestConfigurationNodeForOut(
+          newWall,
+          wallTiles - 1,
+          Array.from(configurationNodes[i].children.get(out).values()),
+          playerDrawsLeft,
+        );
+
+        const newConfigurationNodes = configurationNodes.slice();
+        newConfigurationNodes[i] = newConfigurationNode;
+
+        const drawResult = simulateShoubu(
+          wall,
+          wallTiles - 1,
+          newConfigurationNodes,
+          drawsLeft - 1,
+          (currentPlayer + 1) % numPlayers,
+        )
+
+        agariMatrix.forEach((_, index) => {
+          const drawChanceForOut = (wall[out] / ukeireList[i]) * drawChance;
+          
+          agariMatrix[index] += drawChanceForOut  * drawResult[index];
+        });
+      }
+    } else {
+      agariMatrix[numPlayers * i + currentPlayer] += drawChance;
+    }
+  }
+
+  // If we do not end up drawing a tile that results in an event
+  const missResult = simulateShoubu(
+    wall,
+    wallTiles - 1,
+    configurationNodes,
+    drawsLeft - 1,
+    (currentPlayer + 1) % numPlayers,
+  )
+
+  agariMatrix.forEach((_, index) => { 
+    agariMatrix[index] += (1 - eventChance) * missResult[index];
+  });
+
+  return agariMatrix;
 }
 
 //=============================================================================
 // ** Main
 //=============================================================================
 
-const wall = {}
-
-for (let i = 0; i < 34; i++) {
-  wall[i] = 4;
-}
+const wall = new Array(34).fill(4);
 
 // 378m 2378p 123789s
-let hand = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 26];
+let handPlayer = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 26];
 
 // 22m 2356p 1888999s
 // let hand = [1, 1, 10, 11, 13, 14, 18, 25, 25, 25, 26, 26, 26];
 
-hand.forEach(tile => wall[tile] -= 1);
+// 2223334445589m
+// const handPlayer = [1, 1, 9, 10, 16, 17, 18, 25, 25, 25, 26, 26, 26];
+// const handOpp = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 22, 23];
+
+// 2223334445589p
+const handOpp = [10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 16, 17];
+
+handPlayer.forEach(tile => wall[tile] -= 1);
+// handOpp.forEach(tile => wall[tile] -= 1);
+
+const configurationsPlayer = calcMentsuConfigurations(handPlayer);
+const minShantenConfigurationsPlayer = getMinShantenConfigurations(configurationsPlayer);
+
+const configurationsOpp = calcMentsuConfigurations(handOpp);
+const minShantenConfigurationsOpp = getMinShantenConfigurations(configurationsOpp);
+
+const configurationPlayer = new ConfigurationNode(minShantenConfigurationsPlayer);
+const configurationOpp = new ConfigurationNode(minShantenConfigurationsOpp);
+
+const wallTiles = 123;
+
+const drawsLeft = 18;
+const currentPlayer = 0;
 
 const hrStart = process.hrtime();
 
-const configurations = calcMentsuConfigurations(hand);
-const minShantenConfigurations = getMinShantenConfigurations(configurations);
+const memo = new WeakMap();
 
-for (let i = 18; i > 0; i--) {
-  const drawsLeft = i;
-  const wallTiles = 123 - (18 - drawsLeft);
-  
-  console.log(simulate(wall, wallTiles, minShantenConfigurations, 2, 0, drawsLeft));
-}
-
+console.log(
+  simulateShoubu(
+    wall,
+    wallTiles,
+    [configurationPlayer],
+    drawsLeft,
+    currentPlayer,
+  )
+)
 
 const hrEnd = process.hrtime(hrStart);
 console.log(hrEnd[0], hrEnd[1] / 1000000);
