@@ -456,7 +456,6 @@ function simulateBlackBoxShoubu(
 
   const playerDrawChance = calcDrawChance(wallTiles, playerUkeire, 1);
   const oppDrawChance = calcDrawChance(wallTiles, oppUkeire, 1);
-  const eventChance = playerDrawChance + oppDrawChance;
 
   if (configurationNode.shanten === 0) {
     agariMatrix[currentPlayer] += playerDrawChance;
@@ -501,9 +500,19 @@ function simulateBlackBoxShoubu(
         agariMatrix[index] += outDrawChance * drawResult[index];
       });
     }
-  } 
-  
+  }
+
   agariMatrix[2 + currentPlayer] += oppDrawChance;
+
+  let missChance;
+
+  if (configurationNode.shanten === 0) {
+    missChance = 1 - playerDrawChance - oppDrawChance;
+  } else if (currentPlayer === 0) {
+    missChance = 1 - playerDrawChance;
+  } else {
+    missChance = 1 - oppDrawChance;
+  }
 
   const missResult = simulateBlackBoxShoubu(
     wall,
@@ -515,7 +524,7 @@ function simulateBlackBoxShoubu(
   );
 
   agariMatrix.forEach((_, index) => { 
-    agariMatrix[index] += (1 - eventChance) * missResult[index];
+    agariMatrix[index] += missChance * missResult[index];
   });
 
   return agariMatrix;
@@ -740,13 +749,15 @@ console.log(simulateBlackBoxShoubu(
   wallTiles,
   configurationPlayer,
   8,
-  4,
+  drawsLeft,
   0,
 ));
 
 
 let hrEnd = process.hrtime(hrStart);
 console.log(hrEnd[0], hrEnd[1] / 1000000);
+
+console.log(calcDrawChance(123, 8, 1), calcDrawChance(122, 8, 1));
 
 /*
 
