@@ -1,5 +1,5 @@
 /* TODO List:
-  - Memoize the Shoubu calculations
+  - Do the Full on Shoubu calcs
   - Customizable Dora
   - Chiitoi and Kokushi
   - Clean up code, turn it into a library
@@ -325,6 +325,79 @@ function getMinShantenConfigurations(configurations) {
 }
 
 //----------------------------------------------------------------------------
+// * Multi-Man Simulation Helpers
+//----------------------------------------------------------------------------
+
+function getUkeireList(wall, configurationNodes, currentPlayer) {
+  const numPlayers = configurationNodes.length;
+  const ukeireList = new Array(numPlayers).fill(0);
+
+  const currentPlayerOuts = configurationNodes[currentPlayer].outs;
+
+  for (let i = 0; i < numPlayers; i++) {
+    let outsToAdd;
+
+    if (i === currentPlayer) {
+      outsToAdd = currentPlayerOuts; 
+    } else {
+      if (configurationNodes[i].shanten > 0) {
+        continue;
+      }
+
+      const outsSet = new Set(configurationNodes[i].outs);
+
+      currentPlayerOuts.forEach(out => outsSet.delete(out));
+      outsToAdd = [...outsSet];
+    }
+
+    ukeireList[i] = outsToAdd.reduce((total, out) => total + wall[out], 0);
+  }
+
+  return ukeireList;
+}
+
+function getTotalUkeire(wall, configurationNodes) {
+  const totalOuts = configurationNodes.reduce(
+    (total, node) => total = total.concat(node.outs),
+    [],
+  );
+
+  return [...new Set(totalOuts)].reduce((total, out) => total + wall[out], 0);
+}
+
+function getBestConfigurationNodeForOut(
+  wall,
+  wallTiles,
+  candidateConfigurationNodes,
+  drawsLeft, 
+) {
+  if (drawsLeft === 0 || candidateConfigurationNodes.length === 1) {
+    return candidateConfigurationNodes[0];
+  }
+
+  let bestConfigurationNode;
+  let outAgariChance = -1; 
+
+  candidateConfigurationNodes.forEach(configurationNode => {
+    const outAgariChanceForNode = simulateShoubu(
+      wall, 
+      wallTiles,
+      [configurationNode],
+      [drawsLeft],
+      0,
+    );
+
+    if (outAgariChanceForNode > outAgariChance) {
+      outAgariChance = outAgariChanceForNode;
+      bestConfigurationNode = configurationNode;
+    }
+  });
+
+  return bestConfigurationNode;
+}
+
+
+//----------------------------------------------------------------------------
 // * Simulation Methods
 //----------------------------------------------------------------------------
 
@@ -442,11 +515,28 @@ function simulateBlackBoxShoubu(
   oppUkeire,
   drawsLeft,
   currentPlayer,
+  memo,
 ) {
   let agariMatrix = new Array(4).fill(0);
 
   if (drawsLeft === 0) {
     return agariMatrix;
+  }
+
+  if (memo.has(configurationNode)) {
+    const drawsLeftTable = memo.get(configurationNode);
+
+    if (drawsLeftTable[drawsLeft - 1][0] >= 0) {
+      return drawsLeftTable[drawsLeft - 1];
+    }
+  } else {
+    const drawsLeftTable = [];
+
+    for (let i = 0; i < 18; i++) {
+      drawsLeftTable.push(new Array(4).fill(-1));
+    }
+
+    memo.set(configurationNode, drawsLeftTable);
   }
 
   const playerUkeire = configurationNode.outs.reduce(
@@ -478,6 +568,9 @@ function simulateBlackBoxShoubu(
         // Player can't tsumo anyway.
         newConfigurationNode = configurationNode;
       } else {
+        // TODO: We assume that tilesToDiscard has already been created, but 
+        // we should probably add an exception that checks if this is actually
+        // the case.
         const discardTilesCache = configurationNode.tilesToDiscard.get(out);
 
         newConfigurationNode = configurationNode.children.get(out).get(
@@ -486,12 +579,13 @@ function simulateBlackBoxShoubu(
       }
 
       const drawResult = simulateBlackBoxShoubu(
-        newWall,
+        wall,
         wallTiles - 1,
         newConfigurationNode,
         oppUkeire,
         drawsLeft - 1,
         (currentPlayer + 1) % 2,
+        memo,
       );
 
       const outDrawChance = (wall[out] / playerUkeire) * playerDrawChance;
@@ -504,12 +598,10 @@ function simulateBlackBoxShoubu(
 
   agariMatrix[2 + currentPlayer] += oppDrawChance;
 
-  let missChance;
+  let missChance = 1 - oppDrawChance;
 
   if (configurationNode.shanten === 0 || currentPlayer === 0) {
-    missChance = 1 - playerDrawChance - oppDrawChance;
-  } else {
-    missChance = 1 - oppDrawChance;
+    missChance -= playerDrawChance;
   }
 
   const missResult = simulateBlackBoxShoubu(
@@ -519,85 +611,16 @@ function simulateBlackBoxShoubu(
     oppUkeire,
     drawsLeft - 1,
     (currentPlayer + 1) % 2,
+    memo,
   );
 
   agariMatrix.forEach((_, index) => { 
     agariMatrix[index] += missChance * missResult[index];
+    
+    memo.get(configurationNode)[drawsLeft - 1][index] = agariMatrix[index];
   });
 
   return agariMatrix;
-}
-
-//----------------------------------------------------------------------------
-// * Multi-Man Simulation Helpers
-//----------------------------------------------------------------------------
-
-function getUkeireList(wall, configurationNodes, currentPlayer) {
-  const numPlayers = configurationNodes.length;
-  const ukeireList = new Array(numPlayers).fill(0);
-
-  const currentPlayerOuts = configurationNodes[currentPlayer].outs;
-
-  for (let i = 0; i < numPlayers; i++) {
-    let outsToAdd;
-
-    if (i === currentPlayer) {
-      outsToAdd = currentPlayerOuts; 
-    } else {
-      if (configurationNodes[i].shanten > 0) {
-        continue;
-      }
-
-      const outsSet = new Set(configurationNodes[i].outs);
-
-      currentPlayerOuts.forEach(out => outsSet.delete(out));
-      outsToAdd = [...outsSet];
-    }
-
-    ukeireList[i] = outsToAdd.reduce((total, out) => total + wall[out], 0);
-  }
-
-  return ukeireList;
-}
-
-function getTotalUkeire(wall, configurationNodes) {
-  const totalOuts = configurationNodes.reduce(
-    (total, node) => total = total.concat(node.outs),
-    [],
-  );
-
-  return [...new Set(totalOuts)].reduce((total, out) => total + wall[out], 0);
-}
-
-function getBestConfigurationNodeForOut(
-  wall,
-  wallTiles,
-  candidateConfigurationNodes,
-  drawsLeft, 
-) {
-  if (drawsLeft === 0 || candidateConfigurationNodes.length === 1) {
-    return candidateConfigurationNodes[0];
-  }
-
-  let bestConfigurationNode;
-  let outAgariChance = -1; 
-
-  candidateConfigurationNodes.forEach(configurationNode => {
-    const outAgariChanceForNode = simulateShoubu(
-      wall, 
-      wallTiles,
-      [configurationNode],
-      [drawsLeft],
-      0,
-    );
-
-    if (outAgariChanceForNode > outAgariChance) {
-      outAgariChance = outAgariChanceForNode;
-      bestConfigurationNode = configurationNode;
-    }
-  });
-
-  return bestConfigurationNode;
 }
 
 // TODO: EXPERIMENTAL. This function is really, really slow right now and needs 
@@ -700,10 +723,10 @@ function simulateShoubu(
 const wall = new Array(34).fill(4);
 
 // 378m 2378p 123789s
-// let handPlayer = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 26];
+let handPlayer = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 29];
 
 // 22m 2356p 1888999s
-let handPlayer = [1, 1, 10, 11, 15, 16, 16, 25, 25, 25, 26, 26, 26];
+// let handPlayer = [1, 1, 10, 11, 15, 16, 16, 25, 25, 25, 26, 26, 26];
 
 // 2223334445589m
 // const handPlayer = [1, 1, 9, 10, 16, 17, 18, 25, 25, 25, 26, 26, 26];
@@ -733,10 +756,10 @@ const memo = new WeakMap();
 
 simulateHitori(
   wall,
-  wallTiles,
+  wallTiles,  
   configurationPlayer,
   0,
-  drawsLeft,
+  Math.ceil(drawsLeft / 2),
   memo,
 );
 
@@ -747,8 +770,9 @@ console.log(simulateBlackBoxShoubu(
   wallTiles,
   configurationPlayer,
   8,
-  drawsLeft,
+  18,
   0,
+  new WeakMap(),
 ));
 
 
