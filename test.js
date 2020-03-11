@@ -506,10 +506,8 @@ function simulateBlackBoxShoubu(
 
   let missChance;
 
-  if (configurationNode.shanten === 0) {
+  if (configurationNode.shanten === 0 || currentPlayer === 0) {
     missChance = 1 - playerDrawChance - oppDrawChance;
-  } else if (currentPlayer === 0) {
-    missChance = 1 - playerDrawChance;
   } else {
     missChance = 1 - oppDrawChance;
   }
@@ -705,7 +703,7 @@ const wall = new Array(34).fill(4);
 // let handPlayer = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 26];
 
 // 22m 2356p 1888999s
-let handPlayer = [1, 1, 10, 11, 13, 14, 20, 25, 25, 25, 26, 26, 26];
+let handPlayer = [1, 1, 10, 11, 15, 16, 16, 25, 25, 25, 26, 26, 26];
 
 // 2223334445589m
 // const handPlayer = [1, 1, 9, 10, 16, 17, 18, 25, 25, 25, 26, 26, 26];
@@ -756,8 +754,6 @@ console.log(simulateBlackBoxShoubu(
 
 let hrEnd = process.hrtime(hrStart);
 console.log(hrEnd[0], hrEnd[1] / 1000000);
-
-console.log(calcDrawChance(123, 8, 1), calcDrawChance(122, 8, 1));
 
 /*
 
