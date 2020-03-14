@@ -226,8 +226,8 @@ class Container_Call extends PIXI.Container {
     let currPosX = 0;
 
     this.actor.hand.calls.forEach(call => {
-      const callee_rel = (4 + call.target - this.actor.index) % 4;
-      const tileIndex = -1 * (callee_rel - 3);
+      const calleeRel = (4 + call.target - this.actor.index) % 4;
+      const tileIndex = -1 * (calleeRel - 3);
 
       call.mentsu.slice().reverse().forEach((tile, index) => {
         const sprite = this.children[currIndex];

@@ -9,6 +9,10 @@
 // * Utility Methods
 //----------------------------------------------------------------------------
 
+function getHashCode(key) {
+  return key.toString();
+}
+
 function addToBucketMap(bucketMap, key, value) {
   if (!bucketMap.has(key)) {
     bucketMap.set(key, []);
@@ -207,6 +211,47 @@ class ConfigurationNode {
 
 }
 
+//=============================================================================
+// ** GameStateNode
+//=============================================================================
+
+class GameStateNode {
+
+  constructor(configurationNodes) {
+    this.configurationNodes = configurationNodes;
+    this.children = [];
+
+    this.spawnChildren();
+  }
+
+  spawnChildren() {
+    for (let i = 0; i < this.configurationNodes.length; i++) {
+      const configurationNode = this.configurationNodes[i];
+
+      if (configurationNode.shanten === 0) {
+        continue;
+      }
+
+      this.children[i] = new Map();
+
+      // TODO: Encode drawsLeft into gameStateNode.
+      configurationNode.outs.forEach(out => {
+        const discardTilesCache = configurationNode.tilesToDiscard.get(out);
+
+        const newConfigurationNode = configurationNode.children.get(out).get(
+          discardTilesCache.filter(value => value >= 0)[0],
+        );
+
+        const newConfigurationNodes = this.configurationNodes.slice();
+        newConfigurationNodes[i] = newConfigurationNode;
+
+        this.children[i].set(out, new GameStateNode(newConfigurationNodes));
+      });
+    }
+  }
+
+}
+
 //----------------------------------------------------------------------------
 // * Mentsu Configuration Methods
 //----------------------------------------------------------------------------
@@ -323,79 +368,6 @@ function getMinShantenConfigurations(configurations) {
     (_, index) => configurationShanten[index] === shanten
   );
 }
-
-//----------------------------------------------------------------------------
-// * Multi-Man Simulation Helpers
-//----------------------------------------------------------------------------
-
-function getUkeireList(wall, configurationNodes, currentPlayer) {
-  const numPlayers = configurationNodes.length;
-  const ukeireList = new Array(numPlayers).fill(0);
-
-  const currentPlayerOuts = configurationNodes[currentPlayer].outs;
-
-  for (let i = 0; i < numPlayers; i++) {
-    let outsToAdd;
-
-    if (i === currentPlayer) {
-      outsToAdd = currentPlayerOuts; 
-    } else {
-      if (configurationNodes[i].shanten > 0) {
-        continue;
-      }
-
-      const outsSet = new Set(configurationNodes[i].outs);
-
-      currentPlayerOuts.forEach(out => outsSet.delete(out));
-      outsToAdd = [...outsSet];
-    }
-
-    ukeireList[i] = outsToAdd.reduce((total, out) => total + wall[out], 0);
-  }
-
-  return ukeireList;
-}
-
-function getTotalUkeire(wall, configurationNodes) {
-  const totalOuts = configurationNodes.reduce(
-    (total, node) => total = total.concat(node.outs),
-    [],
-  );
-
-  return [...new Set(totalOuts)].reduce((total, out) => total + wall[out], 0);
-}
-
-function getBestConfigurationNodeForOut(
-  wall,
-  wallTiles,
-  candidateConfigurationNodes,
-  drawsLeft, 
-) {
-  if (drawsLeft === 0 || candidateConfigurationNodes.length === 1) {
-    return candidateConfigurationNodes[0];
-  }
-
-  let bestConfigurationNode;
-  let outAgariChance = -1; 
-
-  candidateConfigurationNodes.forEach(configurationNode => {
-    const outAgariChanceForNode = simulateShoubu(
-      wall, 
-      wallTiles,
-      [configurationNode],
-      [drawsLeft],
-      0,
-    );
-
-    if (outAgariChanceForNode > outAgariChance) {
-      outAgariChance = outAgariChanceForNode;
-      bestConfigurationNode = configurationNode;
-    }
-  });
-
-  return bestConfigurationNode;
-}
-
 
 //----------------------------------------------------------------------------
 // * Simulation Methods
@@ -532,7 +504,9 @@ function simulateBlackBoxShoubu(
   } else {
     const drawsLeftTable = [];
 
-    for (let i = 0; i < 18; i++) {
+    // TODO: Instead of 36, this should be some sort of MAX_DRAWS_LEFT
+    // constant.
+    for (let i = 0; i < 36; i++) {
       drawsLeftTable.push(new Array(4).fill(-1));
     }
 
@@ -562,24 +536,18 @@ function simulateBlackBoxShoubu(
       const newWall = wall.slice();
       newWall[out] -= 1;
 
-      let newConfigurationNode;
+      let newConfigurationNode = configurationNode;
 
-      if (configurationNode.shanten >= playerDrawsLeft) {
-        // Player can't tsumo anyway.
-        newConfigurationNode = configurationNode;
-      } else {
-        // TODO: We assume that tilesToDiscard has already been created, but 
-        // we should probably add an exception that checks if this is actually
-        // the case.
+      if (playerDrawsLeft > configurationNode.shanten - 1) {
         const discardTilesCache = configurationNode.tilesToDiscard.get(out);
 
-        newConfigurationNode = configurationNode.children.get(out).get(
+        newConfigurationNode =  configurationNode.children.get(out).get(
           discardTilesCache[playerDrawsLeft - 1],
         );
       }
-
+      
       const drawResult = simulateBlackBoxShoubu(
-        wall,
+        newWall,
         wallTiles - 1,
         newConfigurationNode,
         oppUkeire,
@@ -623,95 +591,157 @@ function simulateBlackBoxShoubu(
   return agariMatrix;
 }
 
-// TODO: EXPERIMENTAL. This function is really, really slow right now and needs 
-// some optimization. Either bottom-up DP or top-down memoization.
-function simulateShoubu(
+//----------------------------------------------------------------------------
+// * Generate Outs List
+//----------------------------------------------------------------------------
+
+function getOutsList(gameStateNode, currentPlayer) {
+  const configurationNodes = gameStateNode.configurationNodes;
+
+  const numPlayers = configurationNodes.length;
+  const outsList = new Array(numPlayers);
+
+  outsList[currentPlayer] = configurationNodes[currentPlayer].outs;
+
+  for (let i = 0; i < numPlayers; i++) {
+    if (i === currentPlayer) {
+      continue;
+    }
+
+    const outsSet = new Set(configurationNodes[i].outs);
+
+    outsList[currentPlayer].forEach(out => outsSet.delete(out));
+    outsList[i] = [...outsSet];
+  }
+
+  return outsList;
+}
+
+let iterations = 0;
+
+//----------------------------------------------------------------------------
+// * Simulate Hanchan
+//----------------------------------------------------------------------------
+
+function simulateGameState(
   wall,
   wallTiles,
-  configurationNodes,
+  gameStateNode,
   drawsLeft,
   currentPlayer,
+  memo,
+  currentChance = 1,
 ) {
-  const numPlayers = configurationNodes.length;
+  const numPlayers = gameStateNode.configurationNodes.length;
 
   let agariMatrix = new Array(numPlayers ** 2).fill(0);
 
-  if (drawsLeft === 0) {
+  // Prune events that have a < 0.000001% chance of happening.
+  if (drawsLeft === 0 || currentChance < 0.00000001) {
     return agariMatrix;
   }
 
-  const ukeireList = getUkeireList(wall, configurationNodes, currentPlayer);
-  const totalUkeire = getTotalUkeire(wall, configurationNodes);
+  const wallHashCode = getHashCode(wall);
 
-  const eventChance = calcDrawChance(wallTiles, totalUkeire, 1);
+  if (!memo.has(wallHashCode)) {
+    memo.set(wallHashCode, new WeakMap());
+  }
+
+  if (!memo.get(wallHashCode).has(gameStateNode)) {
+    const newDrawsLeftTable = [];
+
+    for (let i = 0; i < 70; i++) {
+      newDrawsLeftTable.push(new Array(4).fill(-1));
+    }
+
+    memo.get(wallHashCode).set(gameStateNode, newDrawsLeftTable);
+  }
+
+  const drawsLeftTable = memo.get(wallHashCode).get(gameStateNode);
+
+  if (drawsLeftTable[drawsLeft - 1][0] >= 0) {
+    return drawsLeftTable[drawsLeft - 1];
+  }
+
+  iterations += 1;
+
+  const outsList = getOutsList(gameStateNode, currentPlayer);
+  const ukeireList = outsList.map(outs => {
+    return outs.reduce((total, out) => total += wall[out], 0);
+  });
+
+  const totalUkeire = ukeireList.reduce((total, ukeire) => total + ukeire);
+  let missChance = 1 - calcDrawChance(wallTiles, totalUkeire, 1);
 
   for (let i = 0; i < numPlayers; i++) {
     const drawChance = calcDrawChance(wallTiles, ukeireList[i], 1);
 
-    if (i === currentPlayer && configurationNodes[i].shanten > 0) {
-      const playerDrawsLeft = Math.ceil(drawsLeft / numPlayers) - 1;
+    if (gameStateNode.configurationNodes[i].shanten === 0) {
+      agariMatrix[i * numPlayers + currentPlayer] += drawChance;
+      continue;
+    } else if (i !== currentPlayer) {
+      missChance += drawChance;
+      continue;
+    }
 
-      if (configurationNodes[i].shanten > playerDrawsLeft) {
+    for (let j = 0; j < outsList[i].length; j++) {
+      const out = outsList[i][j];
+      
+      if (wall[out] === 0) {
         continue;
       }
 
-      for (let j = 0; j < configurationNodes[i].outs.length; j++) {
-        const out = configurationNodes[i].outs[j];
+      const outDrawChance = (wall[out] / ukeireList[i]) * drawChance;
 
-        if (wall[out] === 0) {
-          continue;
-        }
+      let newGameStateNode;
 
-        const newWall = wall.slice();
-        newWall[out] -= 1;
-
-        // TODO: For now, let's assume that the currentPlayer chooses the 
-        // configuration node that gives them the most HMS win percentage.
-        //
-        // We probably want to add a that restricts the player from 
-        // playing certain outs (i.e. the dora).
-        const newConfigurationNode = getBestConfigurationNodeForOut(
-          newWall,
-          wallTiles - 1,
-          Array.from(configurationNodes[i].children.get(out).values()),
-          playerDrawsLeft,
-        );
-
-        const newConfigurationNodes = configurationNodes.slice();
-        newConfigurationNodes[i] = newConfigurationNode;
-
-        const drawResult = simulateShoubu(
-          wall,
-          wallTiles - 1,
-          newConfigurationNodes,
-          drawsLeft - 1,
-          (currentPlayer + 1) % numPlayers,
-        )
-
-        agariMatrix.forEach((_, index) => {
-          const drawChanceForOut = (wall[out] / ukeireList[i]) * drawChance;
-
-          agariMatrix[index] += drawChanceForOut  * drawResult[index];
-        });
+      if (currentPlayer !== i) {
+        newGameStateNode = gameStateNode;
+      } else {
+        newGameStateNode = gameStateNode.children[i].get(out);
       }
-    } else {
-      agariMatrix[numPlayers * i + currentPlayer] += drawChance;
+
+      // TODO: The fact that the wall changes the game state is really 
+      // annoying... 
+      newWall = wall.slice();
+      newWall[out] -= 1;
+
+      const drawResult = simulateGameState(
+        newWall,
+        wallTiles - 1,
+        newGameStateNode,
+        drawsLeft - 1,
+        (currentPlayer + 1) % 2,
+        memo,
+        currentChance * outDrawChance,
+      );
+
+      agariMatrix.forEach((_, index) => { 
+        agariMatrix[index] += outDrawChance * drawResult[index];
+      });
     }
   }
 
-  // TODO: Eventually we should modifying wall for all the different draws...
-  // That might actually be intractable though, makes it really hard to DP.
-  const missResult = simulateShoubu(
+  const missResult = simulateGameState(
     wall,
     wallTiles - 1,
-    configurationNodes,
+    gameStateNode,
     drawsLeft - 1,
-    (currentPlayer + 1) % numPlayers,
-  )
+    (currentPlayer + 1) % 2,
+    memo,
+    currentChance * missChance,
+  );
 
   agariMatrix.forEach((_, index) => { 
-    agariMatrix[index] += (1 - eventChance) * missResult[index];
+    agariMatrix[index] += missChance * missResult[index];
+
+    const drawsLeftTable = memo.get(wallHashCode).get(gameStateNode);
+    drawsLeftTable[drawsLeft - 1][index] = agariMatrix[index];
   });
+
+  if (drawsLeft === 32) {
+    console.log([...memo.keys()].length);
+  }
 
   return agariMatrix;
 }
@@ -725,18 +755,28 @@ const wall = new Array(34).fill(4);
 // 378m 2378p 123789s
 let handPlayer = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 29];
 
-// 22m 2356p 1888999s
-// let handPlayer = [1, 1, 10, 11, 15, 16, 16, 25, 25, 25, 26, 26, 26];
+// 23m 2256p 1888999s
+let handOpp = [1, 2, 11, 11, 15, 16, 18, 25, 25, 25, 26, 26, 26];
 
 // 2223334445589m
 // const handPlayer = [1, 1, 9, 10, 16, 17, 18, 25, 25, 25, 26, 26, 26];
 // const handOpp = [1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 22, 23];
 
-// 2223334445589p
-const handOpp = [10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13, 16, 17];
+// 23m22233344455p
+// const handOpp = [1, 2, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13];
 
-handPlayer.forEach(tile => wall[tile] -= 1);
-// handOpp.forEach(tile => wall[tile] -= 1);
+const playerWall = wall.slice();
+const oppWall = wall.slice();
+
+handPlayer.forEach(tile => {
+  wall[tile] -= 1; 
+  playerWall[tile] -= 1;
+});
+
+handOpp.forEach(tile => {
+  wall[tile] -= 1;
+  oppWall[tile] -= 1;
+});
 
 const configurationsPlayer = calcMentsuConfigurations(handPlayer);
 const minShantenConfigurationsPlayer = getMinShantenConfigurations(configurationsPlayer);
@@ -747,50 +787,58 @@ const minShantenConfigurationsOpp = getMinShantenConfigurations(configurationsOp
 const configurationPlayer = new ConfigurationNode(minShantenConfigurationsPlayer);
 const configurationOpp = new ConfigurationNode(minShantenConfigurationsOpp);
 
-const wallTiles = 123;
+const wallTiles = 110;
 
-const drawsLeft = 18;
+const drawsLeft = 32;
 const currentPlayer = 0;
 
-const memo = new WeakMap();
-
+// Warm-up Configurations
+// TODO: The walls should be the walls that each player sees
 simulateHitori(
-  wall,
+  playerWall,
   wallTiles,  
   configurationPlayer,
   0,
-  Math.ceil(drawsLeft / 2),
-  memo,
+  18,
+  new WeakMap(),
 );
+
+simulateHitori(
+  oppWall,
+  wallTiles,
+  configurationOpp,
+  0,
+  18,
+  new WeakMap(),
+)
+
+const gameStateNode = new GameStateNode([configurationPlayer, configurationOpp]);
 
 let hrStart = process.hrtime();
 
+console.log(simulateGameState(
+  wall,
+  wallTiles,
+  gameStateNode,
+  drawsLeft,
+  0,
+  new Map(),
+).map(value => value * 100 + "%"));
+
+let hrEnd = process.hrtime(hrStart);
+console.log(hrEnd[0], hrEnd[1] / 1000000);
+
+console.log(iterations);
+
+hrStart = process.hrtime();
 console.log(simulateBlackBoxShoubu(
   wall,
   wallTiles,
   configurationPlayer,
   8,
-  18,
+  drawsLeft,
   0,
   new WeakMap(),
 ));
-
-
-let hrEnd = process.hrtime(hrStart);
+hrEnd = process.hrtime(hrStart);
 console.log(hrEnd[0], hrEnd[1] / 1000000);
-
-/*
-
-console.log(
-  simulateShoubu(
-    wall,
-    wallTiles,
-    [configurationPlayer],
-    drawsLeft,
-    currentPlayer,
-  )
-)
-
-*/
-
-
