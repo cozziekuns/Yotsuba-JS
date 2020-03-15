@@ -1,16 +1,30 @@
 /* TODO List:
+  - Generate a transposition table for game state.
   - Do the Full on Shoubu calcs
   - Customizable Dora
   - Chiitoi and Kokushi
   - Clean up code, turn it into a library
 */
 
+const configurationNodeMemo = new Map();
+const gameStateNodeMemo = new Map();
+
 //----------------------------------------------------------------------------
 // * Utility Methods
 //----------------------------------------------------------------------------
 
-function getHashCode(key) {
-  return key.toString();
+function getConfigurationListHashCode(configurationList) {
+  const tiles = configurationList[0].reduce((total, configuration) => {
+    return total.concat(...configuration);
+  }, []);
+
+  return tiles.sort((a, b) => a - b).toString();
+}
+
+function getConfigurationNodesHashCode(configurationNodes) {
+  return configurationNodes.reduce((total, node) => {
+    return total + node.hashCode + '|'
+  }, '');
 }
 
 function addToBucketMap(bucketMap, key, value) {
@@ -100,6 +114,14 @@ class ConfigurationNode {
 
       this.tilesToDiscard.set(out, tileArray);
     });
+  }
+
+  //--------------------------------------------------------------------------
+  // * Getters and Setters
+  //--------------------------------------------------------------------------
+
+  get hashCode() {
+    return getConfigurationListHashCode(this.configurationList);
   }
 
   //--------------------------------------------------------------------------
@@ -204,7 +226,16 @@ class ConfigurationNode {
 
     this.children.forEach(childForOut => {
       childForOut.forEach((configurationList, tileToRemove) => {
-        childForOut.set(tileToRemove, new ConfigurationNode(configurationList));
+        const hashCode = getConfigurationListHashCode(configurationList);
+
+        if (!configurationNodeMemo.has(hashCode)) { 
+          configurationNodeMemo.set(
+            hashCode,
+            new ConfigurationNode(configurationList),
+          );
+        }
+
+        childForOut.set(tileToRemove, configurationNodeMemo.get(hashCode));
       });
     });
   }
@@ -222,6 +253,10 @@ class GameStateNode {
     this.children = [];
 
     this.spawnChildren();
+  }
+
+  get hashCode() {
+    return getConfigurationNodesHashCode(this.configurationNodes);
   }
 
   spawnChildren() {
@@ -245,7 +280,16 @@ class GameStateNode {
         const newConfigurationNodes = this.configurationNodes.slice();
         newConfigurationNodes[i] = newConfigurationNode;
 
-        this.children[i].set(out, new GameStateNode(newConfigurationNodes));
+        const newHashCode = getConfigurationNodesHashCode(newConfigurationNodes);
+
+        if (!gameStateNodeMemo.has(newHashCode)) {
+          gameStateNodeMemo.set(
+            newHashCode,
+            new GameStateNode(newConfigurationNodes),
+          );
+        }
+
+        this.children[i].set(out, gameStateNodeMemo.get(newHashCode));
       });
     }
   }
@@ -637,27 +681,22 @@ function simulateGameState(
   let agariMatrix = new Array(numPlayers ** 2).fill(0);
 
   // Prune events that have a < 0.000001% chance of happening.
-  if (drawsLeft === 0 || currentChance < 0.00000001) {
+  // if (drawsLeft === 0 || currentChance < 0.00000001) {
+  if (drawsLeft === 0) {
     return agariMatrix;
   }
 
-  const wallHashCode = getHashCode(wall);
-
-  if (!memo.has(wallHashCode)) {
-    memo.set(wallHashCode, new WeakMap());
-  }
-
-  if (!memo.get(wallHashCode).has(gameStateNode)) {
+  if (!memo.has(gameStateNode)) {
     const newDrawsLeftTable = [];
 
     for (let i = 0; i < 70; i++) {
       newDrawsLeftTable.push(new Array(4).fill(-1));
     }
 
-    memo.get(wallHashCode).set(gameStateNode, newDrawsLeftTable);
+    memo.set(gameStateNode, newDrawsLeftTable);
   }
 
-  const drawsLeftTable = memo.get(wallHashCode).get(gameStateNode);
+  const drawsLeftTable = memo.get(gameStateNode);
 
   if (drawsLeftTable[drawsLeft - 1][0] >= 0) {
     return drawsLeftTable[drawsLeft - 1];
@@ -735,13 +774,9 @@ function simulateGameState(
   agariMatrix.forEach((_, index) => { 
     agariMatrix[index] += missChance * missResult[index];
 
-    const drawsLeftTable = memo.get(wallHashCode).get(gameStateNode);
+    const drawsLeftTable = memo.get(gameStateNode);
     drawsLeftTable[drawsLeft - 1][index] = agariMatrix[index];
   });
-
-  if (drawsLeft === 32) {
-    console.log([...memo.keys()].length);
-  }
 
   return agariMatrix;
 }
@@ -756,7 +791,7 @@ const wall = new Array(34).fill(4);
 let handPlayer = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 29];
 
 // 23m 2256p 1888999s
-let handOpp = [1, 2, 11, 11, 15, 16, 18, 25, 25, 25, 26, 26, 26];
+let handOpp = [1, 2, 11, 11, 15, 16, 17, 25, 25, 25, 26, 26, 26];
 
 // 2223334445589m
 // const handPlayer = [1, 1, 9, 10, 16, 17, 18, 25, 25, 25, 26, 26, 26];
@@ -822,8 +857,8 @@ console.log(simulateGameState(
   gameStateNode,
   drawsLeft,
   0,
-  new Map(),
-).map(value => value * 100 + "%"));
+  new WeakMap(),
+));
 
 let hrEnd = process.hrtime(hrStart);
 console.log(hrEnd[0], hrEnd[1] / 1000000);
