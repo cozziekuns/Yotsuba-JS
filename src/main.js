@@ -47,7 +47,7 @@ class Game_Application {
       width: WINDOW_WIDTH,
       height: WINDOW_HEIGHT,
       backgroundColor: 0x10A0C0,
-      resolution: 2,
+      resolution: 1,
       autoDensity: true,
     });
 

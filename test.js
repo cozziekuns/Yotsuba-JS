@@ -13,6 +13,34 @@ const gameStateNodeMemo = new Map();
 // * Utility Methods
 //----------------------------------------------------------------------------
 
+function getHandFromString(string) {
+  const result = [];
+  const currTiles = [];
+
+  for (let i = 0; i < string.length; i++) {
+    const tileChar = string.charAt(i);
+
+    if ( /^\d$/.test(tileChar)) {
+      currTiles.push(Number(tileChar - 1));
+    } else {
+      if (tileChar === 'm') {
+        result.push(...currTiles);
+      } else if (tileChar === 'p') {
+        result.push(...currTiles.map(tile => tile + 9));
+      } else if (tileChar === 's') {
+        result.push(...currTiles.map(tile => tile + 18));
+      } else if (tileChar === 'z') {
+        result.push(...currTiles.map(tile => tile + 27));
+      }
+
+      // Empty the array of currTiles
+      currTiles.length = 0;
+    }
+  }
+
+  return result.sort((a, b) => a - b);
+}
+
 function getConfigurationListHashCode(configurationList) {
   const tiles = configurationList[0].reduce((total, configuration) => {
     return total.concat(...configuration);
@@ -275,6 +303,7 @@ class GameStateNode {
 
         const newConfigurationNode = configurationNode.children.get(out).get(
           discardTilesCache.filter(value => value >= 0)[0],
+          // Math.max(...discardTilesCache.filter(value => value >= 0)),
         );
 
         const newConfigurationNodes = this.configurationNodes.slice();
@@ -661,8 +690,6 @@ function getOutsList(gameStateNode, currentPlayer) {
   return outsList;
 }
 
-let iterations = 0;
-
 //----------------------------------------------------------------------------
 // * Simulate Hanchan
 //----------------------------------------------------------------------------
@@ -701,8 +728,6 @@ function simulateGameState(
   if (drawsLeftTable[drawsLeft - 1][0] >= 0) {
     return drawsLeftTable[drawsLeft - 1];
   }
-
-  iterations += 1;
 
   const outsList = getOutsList(gameStateNode, currentPlayer);
   const ukeireList = outsList.map(outs => {
@@ -788,10 +813,10 @@ function simulateGameState(
 const wall = new Array(34).fill(4);
 
 // 378m 2378p 123789s
-let handPlayer = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 29];
+// let handPlayer = [2, 6, 7, 10, 11, 15, 16, 18, 19, 20, 24, 25, 29];
 
 // 23m 2256p 1888999s
-let handOpp = [1, 2, 11, 11, 15, 16, 17, 25, 25, 25, 26, 26, 26];
+// let handOpp = [1, 2, 11, 11, 15, 16, 17, 25, 25, 25, 26, 26, 26];
 
 // 2223334445589m
 // const handPlayer = [1, 1, 9, 10, 16, 17, 18, 25, 25, 25, 26, 26, 26];
@@ -799,6 +824,9 @@ let handOpp = [1, 2, 11, 11, 15, 16, 17, 25, 25, 25, 26, 26, 26];
 
 // 23m22233344455p
 // const handOpp = [1, 2, 10, 10, 10, 11, 11, 11, 12, 12, 12, 13, 13];
+
+const handPlayer = getHandFromString('45566m34556p567s');
+const handOpp = getHandFromString('456m12388p55667s');
 
 const playerWall = wall.slice();
 const oppWall = wall.slice();
@@ -824,7 +852,7 @@ const configurationOpp = new ConfigurationNode(minShantenConfigurationsOpp);
 
 const wallTiles = 110;
 
-const drawsLeft = 32;
+const drawsLeft = 20;
 const currentPlayer = 0;
 
 // Warm-up Configurations
@@ -863,14 +891,12 @@ console.log(simulateGameState(
 let hrEnd = process.hrtime(hrStart);
 console.log(hrEnd[0], hrEnd[1] / 1000000);
 
-console.log(iterations);
-
 hrStart = process.hrtime();
 console.log(simulateBlackBoxShoubu(
   wall,
   wallTiles,
   configurationPlayer,
-  8,
+  6,
   drawsLeft,
   0,
   new WeakMap(),
