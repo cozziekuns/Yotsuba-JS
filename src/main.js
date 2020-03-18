@@ -47,7 +47,7 @@ class Game_Application {
       width: WINDOW_WIDTH,
       height: WINDOW_HEIGHT,
       backgroundColor: 0x10A0C0,
-      resolution: 1,
+      resolution: 2,
       autoDensity: true,
     });
 
@@ -176,47 +176,36 @@ class Game_Application {
 
   // TODO: Clean this up... eventually...
   createButtonSprites() {
-    this.forwardButton = new PIXI.Text('>>');
-    this.forwardButton.x = 720 + 24;
-    this.forwardButton.y = 24;
-
-    this.forwardButton.interactive = true;
-    this.forwardButton.buttonMode = true;
+    // --- Forward Button ---
+    this.forwardButton = new Sprite_TextButton('>>', 720 + 24, 24);
     this.forwardButton.on('mousedown', this.setAdvanceInterval.bind(this));
     this.forwardButton.on('mouseup', this.clearMouseIntervalAndTimeout.bind(this));
 
     this.context.stage.addChild(this.forwardButton);
 
-    this.backwardButton = new PIXI.Text('<<');
-    this.backwardButton.x = 720 + 72;
-    this.backwardButton.y = 24;
-
-    this.backwardButton.interactive = true;
-    this.backwardButton.buttonMode = true;
+    // --- Backward Button ---
+    this.backwardButton = new Sprite_TextButton('<<', 720 + 72, 24);
     this.backwardButton.on('mousedown', this.setRewindInterval.bind(this));
     this.backwardButton.on('mouseup', this.clearMouseIntervalAndTimeout.bind(this));
 
     this.context.stage.addChild(this.backwardButton);
 
-    this.nextRoundButton = new PIXI.Text('>❙');
-    this.nextRoundButton.x = 720 + 24;
-    this.nextRoundButton.y = 60;
-    this.nextRoundButton.interactive = true;
-    this.nextRoundButton.buttonMode = true;
-
+    // --- Next Round Button ---
+    this.nextRoundButton = new Sprite_TextButton('>❙', 720 + 24, 72);
     this.nextRoundButton.on('mousedown', this.advanceRound.bind(this));
 
     this.context.stage.addChild(this.nextRoundButton);
 
-    this.previousRoundButton = new PIXI.Text('❙<');
-    this.previousRoundButton.x = 720 + 72;
-    this.previousRoundButton.y = 60;
-
-    this.previousRoundButton.interactive = true;
-    this.previousRoundButton.buttonMode = true;
+    // --- Prev Round Button
+    this.previousRoundButton = new Sprite_TextButton('❙<', 720 + 72, 72);
     this.previousRoundButton.on('mousedown', this.rewindRound.bind(this));
 
     this.context.stage.addChild(this.previousRoundButton);
+
+    // --- Simulate Hitori Button ---
+    this.simulateHitoriButton = new Sprite_TextButton('Simulate Hitori', 720 + 24, 120);
+
+    this.context.stage.addChild(this.simulateHitoriButton);
   }
 
   updateSprites() {

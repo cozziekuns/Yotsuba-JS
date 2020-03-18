@@ -266,11 +266,37 @@ class Game_Round {
     this.tilesLeft = 70;
   }
 
+  //--------------------------------------------------------------------------
+  // * Getters and Setters
+  //--------------------------------------------------------------------------
+
   getActorWind(actor) {
     const remainder = (actor - this.round) % 4;
 
     return (remainder < 0 ? remainder + 4 : remainder);
   }
+
+  //--------------------------------------------------------------------------
+  // * Refresh
+  //--------------------------------------------------------------------------
+
+  refreshWall() {
+    this.wall = new Array(136).fill(0).map((_, index) => index);
+
+    // Remove all the haipai tiles
+    this.haipai.forEach(hand => {
+      hand.forEach(tile => this.wall.splice(this.wall.indexOf(tile), 1));
+    });
+
+    // Remove the dora tile
+    this.wall.splice(this.wall.indexOf(this.dora[0]), 1);
+
+    this.tilesLeft = 70;
+  }
+
+  //--------------------------------------------------------------------------
+  // * Action Loop Processing
+  //--------------------------------------------------------------------------
 
   performCurrentAction() {
     if (this.currentAction === this.actions.length) {
@@ -345,7 +371,7 @@ class Game_Round {
   //--------------------------------------------------------------------------
 
   performDrawAction(action) {
-    this.wall.shift();
+    this.wall.splice(this.wall.indexOf(action.data.tile), 1);
     this.actors[action.actor].drawTile(action.data.tile);
 
     this.tilesLeft -= 1;
@@ -443,6 +469,8 @@ class Game_Replay {
       actor.points = round.points[index];
       actor.hand.refreshHaipai(round.haipai[index]);
     });
+
+    round.refreshWall();
   }
 
   getCurrentRound() {

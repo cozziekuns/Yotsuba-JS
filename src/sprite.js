@@ -1,4 +1,53 @@
 //=============================================================================
+// ** Sprite_TextButton
+//=============================================================================
+
+class Sprite_TextButton extends PIXI.Container {
+
+  constructor(name, x, y) {
+    super();
+    this.name = name;
+    this.x = x;
+    this.y = y;
+    this.buttonMode = true;
+    this.interactive = true;
+
+    this.createTextSprite();
+    this.createBackgroundSprite();
+    this.addChildSprites();
+  }
+
+  createTextSprite() {
+    this.textSprite = new PIXI.Text(this.name);
+    this.textSprite.x = 4;
+    this.textSprite.y = 4;
+  }
+
+  createBackgroundSprite() {
+    // TODO: Make this button look prettier
+    const graphics = new PIXI.Graphics();
+
+    graphics.lineStyle(2, 0x404040, 1);
+    graphics.beginFill(0xF0F0F0);
+    graphics.drawRoundedRect(
+      0,
+      0,
+      this.textSprite.width + 8,
+      this.textSprite.height + 8,
+      4,
+    );
+    graphics.endFill();
+
+    this.backgroundSprite = graphics;
+  }
+
+  addChildSprites() {
+    this.addChild(this.backgroundSprite, this.textSprite);
+  }
+
+}
+
+//=============================================================================
 // ** Sprite_Tile
 //=============================================================================
 
