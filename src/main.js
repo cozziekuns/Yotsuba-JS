@@ -54,7 +54,7 @@ class Game_Application {
       width: Config.WINDOW_WIDTH,
       height: Config.WINDOW_HEIGHT,
       backgroundColor: 0x10A0C0,
-      resolution: 2,
+      resolution: window.devicePixelRatio,
       autoDensity: true,
     });
 
