@@ -77,13 +77,11 @@ class Game_Application {
 
   advanceRound() {
     this.replay.gotoNextRound();
-    
     this.refreshSprites();
   }
 
   rewindRound() {
     this.replay.gotoPreviousRound();
-
     this.refreshSprites();
   }
 
