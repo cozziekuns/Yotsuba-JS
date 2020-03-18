@@ -1,8 +1,11 @@
+import * as Config from './config.js';
+import { SimulationAdapter } from './simulator/simulate.js';
+
 //=============================================================================
 // ** Game_Action
 //=============================================================================
 
-class Game_Action {
+export class Game_Action {
 
   constructor(action_type, actor, data) {
     this.action_type = action_type;
@@ -16,7 +19,7 @@ class Game_Action {
 // ** Game_Call
 //=============================================================================
 
-class Game_Call {
+export class Game_Call {
 
   constructor(mentsu, target) {
     this.mentsu = mentsu;
@@ -29,7 +32,7 @@ class Game_Call {
 // ** Game_Hand
 //=============================================================================
 
-class Game_Hand {
+export class Game_Hand {
 
   constructor(actor) {
     this.actor = actor;
@@ -121,7 +124,7 @@ class Game_Hand {
 // ** Game_Actor
 //=============================================================================
 
-class Game_Actor {
+export class Game_Actor {
 
   constructor(index) {
     this.index = index;
@@ -140,18 +143,6 @@ class Game_Actor {
     this.hasDrawnTile = false;
 
     this.voice = -1;
-  }
-
-  // TODO: Figure out where this goes
-  getCallVoice(callType) {
-    switch(callType) {
-      case 'chi':
-        return 3;
-      case 'pon':
-        return 4;
-      case 'kakan', 'minkan', 'ankan':
-        return 5;
-    }
   }
 
   refresh() {
@@ -177,7 +168,7 @@ class Game_Actor {
 
   performCall(mentsu, target, callType) {
     this.hand.performCall(mentsu, target);
-    this.voice = this.getCallVoice(callType);
+    this.voice = Config.CALL_TYPE_TO_CALL_VOICE[callType];
   }
 
   performRiichiCall() {
@@ -214,7 +205,7 @@ class Game_Actor {
 
     switch (lastAction.action_type) {
       case 'call':
-        this.voice = this.getCallVoice(lastAction.data.callType);
+        this.voice = Config.CALL_TYPE_TO_CALL_VOICE[lastAction.data.callType];
         break;
       case 'riichi_call':
         this.voice = 0;
@@ -247,7 +238,7 @@ class Game_Actor {
 // ** Game_Round
 //=============================================================================
 
-class Game_Round {
+export class Game_Round {
 
   constructor(actors, round, homba) {
     this.actors = actors;
@@ -442,17 +433,46 @@ class Game_Round {
 }
 
 //=============================================================================
+// ** Game_SimulationAdapter
+//=============================================================================
+
+export class Game_SimulationAdapter { 
+
+  static convertWall(gameWall) {
+    const simulationWall = new Array(34).fill(0);
+
+    gameWall.forEach(tile => simulationWall[Math.floor(tile / 4)] += 1);
+
+    return simulationWall;
+  }
+
+  static convertHand(gameHand) {
+    const simulationHand = [];
+
+    gameHand.tiles.forEach(tile => simulationHand.push(Math.floor(tile / 4)));
+    
+    return simulationHand.sort((a, b) => a - b);  
+  }
+
+}
+
+//=============================================================================
 // ** Game_Replay
 //=============================================================================
 
-class Game_Replay {
+export class Game_Replay {
   
   constructor() {
     this.rounds = [];
-    this.currentRound = 0;
+    this.roundIndex = 0;
+    this.simulation = new SimulationAdapter();
 
     this.initializeActors();
   }
+
+  //--------------------------------------------------------------------------
+  // * Initialization Methods
+  //--------------------------------------------------------------------------
 
   initializeActors() {
     this.actors = [];
@@ -462,8 +482,41 @@ class Game_Replay {
     }
   }
 
+  //--------------------------------------------------------------------------
+  // * Getters and Setters
+  //--------------------------------------------------------------------------
+
+  get currentRound() {
+    return this.rounds[this.roundIndex];
+  }
+
+  get lastRound() {
+    return this.rounds[this.rounds.length - 1];
+  }
+
+  get simulationPayload() {
+    const payload = {};
+
+    payload.wall = Game_SimulationAdapter.convertWall(this.currentRound.wall);
+    payload.wallTiles = this.currentRound.wall.length;
+
+    payload.hands = this.actors.map(
+      actor => Game_SimulationAdapter.convertHand(actor.hand)
+    );
+
+    return payload;
+  }
+
+  addRound(round) {
+    this.rounds.push(round);
+  }
+
+  //--------------------------------------------------------------------------
+  // * Round Flow Logic
+  //--------------------------------------------------------------------------
+
   startCurrentRound() {
-    const round = this.rounds[this.currentRound];
+    const round = this.currentRound;
 
     this.actors.forEach((actor, index) => {
       actor.points = round.points[index];
@@ -471,36 +524,52 @@ class Game_Replay {
     });
 
     round.refreshWall();
+
+    this.simulation.dirty = true;
   }
 
-  getCurrentRound() {
-    return this.rounds[this.currentRound];
+  performCurrentAction() {
+    this.currentRound.performCurrentAction();
+    this.simulation.markDirty();
   }
 
-  getLastRound() {
-    return this.rounds[this.rounds.length - 1];
-  }
-
-  addRound(round) {
-    this.rounds.push(round);
+  rewindCurrentAction() {
+    this.currentRound.rewindCurrentAction();
+    this.simulation.markDirty();
   }
 
   gotoNextRound() {
-    if (this.currentRound === this.rounds.length - 1) {
+    if (this.roundIndex === this.rounds.length - 1) {
       return;
     }
 
-    this.currentRound += 1;
+    this.simulation.markDirty();
+    this.currentRound.rewindToStart();
+
+    this.roundIndex += 1;
     this.startCurrentRound();
   }
 
   gotoPreviousRound() {
-    if (this.currentRound === 0) {
+    this.simulation.markDirty();
+    this.currentRound.rewindToStart();
+
+    if (this.roundIndex === 0) {
       return;
     }
 
-    this.currentRound -= 1;
+    this.roundIndex -= 1;
     this.startCurrentRound();
+  }
+
+  //--------------------------------------------------------------------------
+  // * Simulation Logic
+  //--------------------------------------------------------------------------
+
+  simulateHitori(playerIndex, drawsLeft, endShanten) {
+    this.simulation.processGameState(this.simulationPayload);
+    
+    return this.simulation.simulateHitori(playerIndex, drawsLeft, endShanten);
   }
 
 }

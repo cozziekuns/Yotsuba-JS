@@ -1,3 +1,10 @@
+
+import * as Config from './config.js';
+import { Parser_TenhouGame } from './parser.js';
+import { Sprite_TextButton, Sprite_Voice } from './sprite.js';
+import { Container_Hand, Container_Call, Container_Discard, Container_RoundInfo } from './container.js';
+  
+
 //=============================================================================
 // ** Game_Application
 //=============================================================================
@@ -44,8 +51,8 @@ class Game_Application {
 
   createContext() {
     this.context = new PIXI.Application({
-      width: WINDOW_WIDTH,
-      height: WINDOW_HEIGHT,
+      width: Config.WINDOW_WIDTH,
+      height: Config.WINDOW_HEIGHT,
       backgroundColor: 0x10A0C0,
       resolution: 2,
       autoDensity: true,
@@ -59,24 +66,22 @@ class Game_Application {
   //--------------------------------------------------------------------------
 
   advanceForward() {
-    this.replay.getCurrentRound().performCurrentAction();
+    this.replay.performCurrentAction();
     this.updateSprites();
   }
 
   rewindBackward() {    
-    this.replay.getCurrentRound().rewindCurrentAction();
+    this.replay.rewindCurrentAction();
     this.updateSprites();
   }
 
   advanceRound() {
-    this.replay.getCurrentRound().rewindToStart();
     this.replay.gotoNextRound();
     
     this.refreshSprites();
   }
 
   rewindRound() {
-    this.replay.getCurrentRound().rewindToStart();
     this.replay.gotoPreviousRound();
 
     this.refreshSprites();
@@ -90,16 +95,22 @@ class Game_Application {
     this.advanceForward();
 
     this.mouseTimeout = setTimeout(function() {
-      this.mouseInterval = setInterval(this.advanceForward.bind(this), REPEAT_TICK);
-    }.bind(this), REPEAT_INITIAL_TICK);
+      this.mouseInterval = setInterval(
+        this.advanceForward.bind(this),
+        Config.REPEAT_TICK,
+      );
+    }.bind(this), Config.REPEAT_INITIAL_TICK);
   }
 
   setRewindInterval() {
     this.rewindBackward();
 
     this.mouseTimeout = setTimeout(function() {
-      this.mouseInterval = setInterval(this.rewindBackward.bind(this), REPEAT_TICK);
-    }.bind(this), REPEAT_INITIAL_TICK);
+      this.mouseInterval = setInterval(
+        this.rewindBackward.bind(this),
+        Config.REPEAT_TICK,
+      );
+    }.bind(this), Config.REPEAT_INITIAL_TICK);
   }
 
   clearMouseIntervalAndTimeout() {
@@ -108,6 +119,28 @@ class Game_Application {
 
     this.mouseTimeout = null;
     this.mouseInterval = null;
+  }
+
+  //--------------------------------------------------------------------------
+  // * Simulation Control
+  //--------------------------------------------------------------------------
+
+  callSimulateHitori() {
+    // TODO: Store these values somewhere.
+    for (let i = 0; i < 4; i++) {
+      const drawsLeft = Math.ceil((this.replay.currentRound.tilesLeft - i) / 4);
+
+      const tenpaiChance = this.replay.simulateHitori(i, drawsLeft, 1);
+      const tenpaiChanceText = (tenpaiChance * 100).toPrecision(4)  + '%';
+      const tenpaiText = 'P' + i + ' Hitori Tenpai Chance: ' + tenpaiChanceText;
+
+      const agariChance = this.replay.simulateHitori(i, drawsLeft, 0);
+      const agariChanceText = (agariChance * 100).toPrecision(4)  + '%';
+      const agariText = 'P' + i + ' Hitori Agari Chance: ' + agariChanceText;
+
+      this.resultSprites[i].text = tenpaiText;
+      this.resultSprites[i + 4].text = agariText;
+    }
   }
 
   //--------------------------------------------------------------------------
@@ -121,6 +154,7 @@ class Game_Application {
     this.createCallContainers();
     this.createVoiceSprites();
     this.createButtonSprites();
+    this.createResultSprites();
   }
 
   createHandContainers() {
@@ -157,7 +191,7 @@ class Game_Application {
   }
 
   createRoundInfoContainer() {
-    const round = this.replay.getCurrentRound();
+    const round = this.replay.currentRound;
 
     this.roundInfoContainer = new Container_RoundInfo(round, this.replay.actors);
     this.context.stage.addChild(this.roundInfoContainer);
@@ -204,8 +238,31 @@ class Game_Application {
 
     // --- Simulate Hitori Button ---
     this.simulateHitoriButton = new Sprite_TextButton('Simulate Hitori', 720 + 24, 120);
+    this.simulateHitoriButton.on('mousedown', this.callSimulateHitori.bind(this));
 
     this.context.stage.addChild(this.simulateHitoriButton);
+  }
+
+  createResultSprites() {
+    this.resultSprites = [];
+
+    for (let i = 0; i < 4; i++) {
+      const tenpaiSprite = new PIXI.Text();
+      tenpaiSprite.x = 720 + 24;
+      tenpaiSprite.y = 172 + i * 32; 
+            
+      this.resultSprites.push(tenpaiSprite);
+      this.context.stage.addChild(tenpaiSprite);
+    }
+
+    for (let i = 0; i < 4; i++) {
+      const agariSprite = new PIXI.Text();
+      agariSprite.x = 720 + 24;
+      agariSprite.y = 332 + i * 32;
+
+      this.resultSprites.push(agariSprite);
+      this.context.stage.addChild(agariSprite);
+    }
   }
 
   updateSprites() {
@@ -214,6 +271,7 @@ class Game_Application {
     this.updateCallContainers();
     this.updateRoundInfoContainer();
     this.updateVoiceSprites();
+    this.updateResultSprites();
   }
 
   updateHandContainers() {
@@ -236,6 +294,17 @@ class Game_Application {
     this.voiceSprites.forEach(sprite => sprite.update());
   }
 
+  // TODO: Make Result Sprite a first class citizen
+  updateResultSprites() {
+    this.resultSprites.forEach((sprite, index) => {
+      if (index < 4) {
+        sprite.text = 'P' + index + ' Hitori Tenpai Chance: -%';
+      } else {
+        sprite.text = 'P' + index + ' Hitori Agari Chance: -%';
+      }
+    });
+  }
+
   //---------------------------------------------------------------------------
   // * Refresh Sprites on Round Update
   //---------------------------------------------------------------------------
@@ -246,11 +315,10 @@ class Game_Application {
   }
 
   refreshRoundInfoContainer() {
-    this.roundInfoContainer.round = this.replay.getCurrentRound();
+    this.roundInfoContainer.round = this.replay.currentRound;
   }
 
 }
 
 const app = new Game_Application();
-
 app.preloadAllAssets();

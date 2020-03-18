@@ -375,7 +375,27 @@ class Simulator {
 
 export class SimulationAdapter {
 
+  constructor() {
+    this.dirty = true;
+  }
+
+  //--------------------------------------------------------------------------
+  // * Getters and Setters
+  //--------------------------------------------------------------------------
+
+  markDirty() {
+    this.dirty = true;
+  }
+
+  //--------------------------------------------------------------------------
+  // * Process Payload
+  //--------------------------------------------------------------------------
+
   processGameState(payload) {
+    if (!this.dirty) {
+      return;
+    }
+
     this.wall = payload.wall;
     this.wallTiles = payload.wallTiles;
 
@@ -397,6 +417,7 @@ export class SimulationAdapter {
     }
 
     this.warmupConfigurations(payload);
+    this.dirty = false;
   }
 
   //--------------------------------------------------------------------------
@@ -422,7 +443,6 @@ export class SimulationAdapter {
       }
     }
 
-    // TODO: Figure out things
     this.actorConfigurations.forEach((configuration, index) => {
       Simulator.simulateHitori(
         playerWalls[index],
@@ -435,7 +455,20 @@ export class SimulationAdapter {
     });
   }
 
+  //--------------------------------------------------------------------------
+  // * Simulation Wrappers
+  //--------------------------------------------------------------------------
+
   simulateHitori(playerIndex, drawsLeft, endShanten) {
+    if (this.actorConfigurations[playerIndex].shanten < endShanten) {
+      return 1;
+    }
+
+    if (playerIndex === 3) {
+      console.log(this.wallTiles);
+      console.log(drawsLeft);
+    }
+
     return Simulator.simulateHitori(
       this.wall,
       this.wallTiles,
@@ -452,7 +485,7 @@ export class SimulationAdapter {
       this.walltiles,
       this.actorConfigurations[playerIndex],
       oppUkeire,
-      this.drawsLeft,
+      drawsLeft,
       currentPlayer,
       new WeakMap(),
     );

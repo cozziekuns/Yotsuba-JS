@@ -21,6 +21,7 @@ payload.hands.forEach(hand => {
 const adapter = new SimulationAdapter();
 adapter.processGameState(payload);
 console.log(adapter.simulateGameState([0, 3], 20, 0));
+
 /*
 
 //=============================================================================

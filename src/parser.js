@@ -1,8 +1,10 @@
+import { Game_Action, Game_Round, Game_Replay } from './game.js';
+
 //=============================================================================
 // ** Parser_TenhouGame
 //=============================================================================
 
-class Parser_TenhouGame {
+export class Parser_TenhouGame {
 
   constructor(xmlDocument) {
     this.xmlDocument = xmlDocument;
@@ -72,7 +74,7 @@ class Parser_TenhouGame {
   }
 
   parseDrawNode(node) {
-    const currentRound = this.replay.getLastRound();
+    const currentRound = this.replay.lastRound;
 
     const actor = node.nodeName.charCodeAt(0) - 'T'.charCodeAt();
     const tile = Number(node.nodeName.match(/\d+/)[0]);
@@ -84,7 +86,7 @@ class Parser_TenhouGame {
   }
 
   parseDiscardNode(node) {
-    const currentRound = this.replay.getLastRound();
+    const currentRound = this.replay.lastRound;
 
     const actor = node.nodeName.charCodeAt(0) - 'D'.charCodeAt();
     const tile = Number(node.nodeName.match(/\d+/)[0]);
@@ -101,7 +103,7 @@ class Parser_TenhouGame {
   }
 
   parseCallNode(node) {
-    const currentRound = this.replay.getLastRound();
+    const currentRound = this.replay.lastRound;
 
     const actor = Number(node.attributes['who'].value);
     const data = this.parseCall(Number(node.attributes['m'].value));
@@ -112,7 +114,7 @@ class Parser_TenhouGame {
   }
 
   parseRiichiNode(node) {
-    const currentRound = this.replay.getLastRound();
+    const currentRound = this.replay.lastRound;
 
     const actor = Number(node.attributes['who'].value);
     let action = null;
@@ -130,7 +132,7 @@ class Parser_TenhouGame {
   }
 
   parseAgariNode(node) {
-    const currentRound = this.replay.getLastRound();
+    const currentRound = this.replay.lastRound;
 
     const actor = Number(node.attributes['who'].value);
     const data = {}

@@ -1,4 +1,4 @@
-import { Util, ConfigurationUtil } from './util';
+import { Util, ConfigurationUtil } from './util.js';
 
 //=============================================================================
 // ** ConfigurationNode
@@ -222,12 +222,18 @@ export class GameStateNode {
       this.children[i] = new Map();
 
       // TODO: Encode drawsLeft into gameStateNode.
-      configurationNode.outs.forEach(out => {
+      for (let j = 0; j < configurationNode.outs.length; j++) {
+        const out = configurationNode.outs[j];
+
         const discardTilesCache = configurationNode.tilesToDiscard.get(out);
 
         const newConfigurationNode = configurationNode.children.get(out).get(
           discardTilesCache.filter(value => value >= 0)[0],
         );
+
+        if (!newConfigurationNode) {
+          continue;
+        }
 
         const newConfigurationNodes = this.configurationNodes.slice();
         newConfigurationNodes[i] = newConfigurationNode;
@@ -244,7 +250,7 @@ export class GameStateNode {
         }
 
         this.children[i].set(out, this.memo.get(newHashCode));
-      });
+      }
     }
   }
 
