@@ -180,9 +180,34 @@ export class ConfigurationUtil {
     throw 'Invalid input.';
   }
 
+  static calcChiitoiConfiguration(hand) {
+    const configuration = [];
+    const toitsu = [];
+
+    for (let i = 0; i < hand.length - 1; i++) {
+      if (toitsu.includes(hand[i])) {
+        continue;
+      }
+
+      if (hand[i] === hand[i + 1]) {
+        toitsu.push(hand[i]);
+        configuration.push([hand[i], hand[i + 1]]);
+        i++;
+      } else {
+        configuration.push([hand[i]]);
+      }
+    }
+
+    return configuration;
+  }
+
   //----------------------------------------------------------------------------
   // * Shanten Calculation
   //----------------------------------------------------------------------------
+
+  static calculateChiitoiShanten(configuration) {
+    return 6 - configuration.filter(shape => shape.length === 2).length;
+  }
 
   static calculateConfigurationShanten(configuration, maxMentsu=4) {
     const blocks = configuration.filter(shape => shape.length > 1);

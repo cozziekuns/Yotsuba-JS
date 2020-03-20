@@ -402,6 +402,10 @@ export class SimulationAdapter {
     this.actorConfigurations = new Array(4);
 
     for (let index = 0; index < 4; index++) {
+      const chiitoiConfiguration = ConfigurationUtil.calcChiitoiConfiguration(
+        payload.hands[index],
+      );
+      
       const mentsuConfigurations = ConfigurationUtil.calcMentsuConfigurations(
         payload.hands[index],
       );

@@ -1,3 +1,10 @@
+import { Util, ConfigurationUtil } from './util.js';
+
+const handPlayer = Util.getHandFromString('477m33899p1125s6z');
+const configuration = ConfigurationUtil.calcChiitoiConfiguration(handPlayer);
+
+/*
+
 import { SimulationAdapter } from './simulate.js';
 import { Util } from './util.js';
 
@@ -21,6 +28,8 @@ payload.hands.forEach(hand => {
 const adapter = new SimulationAdapter();
 adapter.processGameState(payload);
 console.log(adapter.simulateGameState([0, 3], 20, 0));
+
+*/
 
 /*
 
