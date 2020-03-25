@@ -463,9 +463,12 @@ export class Game_SimulationAdapter {
 export class Game_Replay {
   
   constructor() {
+    this.simulation = new SimulationAdapter();
+    
     this.rounds = [];
     this.roundIndex = 0;
-    this.simulation = new SimulationAdapter();
+
+    this.playerIndex = 0;
 
     this.initializeActors();
   }

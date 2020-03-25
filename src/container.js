@@ -7,10 +7,11 @@ import { Sprite_Tile } from './sprite.js';
 
 export class Container_Hand extends PIXI.Container {
 
-  constructor(index, actor) {
+  constructor(index, actor, playerIndex) {
     super();
     this.index = index;
     this.actor = actor;
+    this.playerIndex = playerIndex;
 
     this.createTileSprites();
   }
@@ -31,7 +32,7 @@ export class Container_Hand extends PIXI.Container {
     this.x = (Config.DISPLAY_WIDTH - 14 * Config.TILE_WIDTH) / 2;
     this.y = (Config.DISPLAY_HEIGHT - Config.TILE_HEIGHT);
 
-    switch (this.index) {
+    switch ((this.index + this.playerIndex) % 4) {
       case 0:
         this.x = (Config.DISPLAY_WIDTH - 14 * Config.TILE_WIDTH) / 2;
         this.y = Config.DISPLAY_HEIGHT - Config.TILE_HEIGHT;
@@ -50,7 +51,7 @@ export class Container_Hand extends PIXI.Container {
         break;
     }
 
-    this.angle = 360 - this.index * 90;
+    this.angle = 360 - 90 * ((this.index + this.playerIndex) % 4);
   }
 
   updateChildren() {
@@ -74,10 +75,11 @@ export class Container_Hand extends PIXI.Container {
 
 export class Container_Call extends PIXI.Container {
 
-  constructor(index, actor) {
+  constructor(index, actor, playerIndex) {
     super();
     this.index = index;
     this.actor = actor;
+    this.playerIndex = playerIndex;
 
     this.createCallSprites();
   }
@@ -95,7 +97,9 @@ export class Container_Call extends PIXI.Container {
   }
 
   updatePosition() {
-    switch (this.index) {
+    const displayIndex = (this.index + this.playerIndex) % 4;
+
+    switch (displayIndex) {
       case 0:
         this.x = Config.DISPLAY_WIDTH;
         this.y = Config.DISPLAY_HEIGHT;
@@ -114,7 +118,7 @@ export class Container_Call extends PIXI.Container {
         break;
     }
 
-    this.angle = 360 - this.index * 90;
+    this.angle = 360 - 90 * displayIndex;
   }
 
   updateChildren() {
@@ -150,7 +154,6 @@ export class Container_Call extends PIXI.Container {
   
         currIndex += 1;
       });
-
     });
   }
 
@@ -162,10 +165,11 @@ export class Container_Call extends PIXI.Container {
 
 export class Container_Discard extends PIXI.Container {
 
-  constructor(index, actor) {
+  constructor(index, actor, playerIndex) {
     super();
     this.index = index;
     this.actor = actor;
+    this.playerIndex = playerIndex;
 
     this.createDiscardSprites();
   }
@@ -183,7 +187,9 @@ export class Container_Discard extends PIXI.Container {
   }
 
   updatePosition() {
-    switch (this.index) {
+    const displayIndex = (this.index + this.playerIndex) % 4;
+
+    switch (displayIndex) {
       case 0:
         this.x = (Config.DISPLAY_WIDTH - Config.GAME_INFO_WIDTH) / 2;
         this.y = (Config.DISPLAY_HEIGHT + Config.GAME_INFO_HEIGHT) / 2;
@@ -202,7 +208,7 @@ export class Container_Discard extends PIXI.Container {
         break;
     }
 
-    this.angle = 360 - this.index * 90;
+    this.angle = 360 - 90 * displayIndex;
   }
 
   updateChildren() {
@@ -248,10 +254,11 @@ export class Container_Discard extends PIXI.Container {
 
 export class Container_RoundInfo extends PIXI.Container {
 
-  constructor(round, actors) {
+  constructor(round, actors, playerIndex) {
     super();
     this.round = round;
     this.actors = actors;
+    this.playerIndex = playerIndex;
 
     this.createBackgroundSprite();
     this.createPointsSprites();
@@ -376,9 +383,11 @@ export class Container_RoundInfo extends PIXI.Container {
 
     for (let i = 0; i < 5; i++) {
       const doraSprite = new Sprite_Tile(-2);
+      const tileWidth = Config.TILE_WIDTH * 2 / 3;
 
-      const baseX = (Config.GAME_INFO_WIDTH - (Config.TILE_WIDTH * 10 / 3)) / 2;
-      doraSprite.x = baseX + i * (Config.TILE_WIDTH * 2 / 3);
+      const baseX = (Config.GAME_INFO_WIDTH - tileWidth * 4) / 2;
+
+      doraSprite.x = baseX + i * tileWidth;
       doraSprite.y = Config.GAME_INFO_HEIGHT / 2 + 32;
 
       doraSprite.scale.x = 0.67;
@@ -400,16 +409,20 @@ export class Container_RoundInfo extends PIXI.Container {
 
   updateRiichiSprites() {
     this.actors.forEach((actor, index) => {
-      this.riichiSprites[index].visible = (actor.riichiStep == 2);
+      const displayIndex = (index + this.playerIndex) % 4;
+
+      this.riichiSprites[displayIndex].visible = (actor.riichiStep == 2);
     });
   }
 
   updatePointsSprites() {
     this.actors.forEach((actor, index) => {
+      const displayIndex = (index + this.playerIndex) % 4;
+
       const actorWind = this.round.getActorWind(actor.index);
       const windText = Config.WIND_ROTATION_TEXT[actorWind];
 
-      this.pointsSprites[index].text = windText + '：' + actor.points;
+      this.pointsSprites[displayIndex].text = windText + '：' + actor.points;
     });
   }
 

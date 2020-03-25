@@ -88,6 +88,15 @@ class Game_Application {
   }
 
   //--------------------------------------------------------------------------
+  // * Perspective Control
+  //--------------------------------------------------------------------------
+
+  changePerspective() {
+    this.replay.playerIndex = (this.replay.playerIndex + 1) % 4;
+    this.refreshSprites();
+  }
+
+  //--------------------------------------------------------------------------
   // * Interval Logic
   //--------------------------------------------------------------------------
 
@@ -153,7 +162,7 @@ class Game_Application {
   }
 
   //--------------------------------------------------------------------------
-  // * Sprite Handling Logic
+  // * Sprite Handling Logic (Move this to a spriteset?)
   //--------------------------------------------------------------------------
 
   createSprites() {
@@ -170,7 +179,11 @@ class Game_Application {
     this.handContainers = [];
 
     this.replay.actors.forEach((actor, index) => {
-      const handContainer = new Container_Hand(index, actor);
+      const handContainer = new Container_Hand(
+        index,
+        actor,
+        this.replay.playerIndex,
+      );
 
       this.handContainers.push(handContainer);
       this.context.stage.addChild(handContainer);
@@ -181,7 +194,11 @@ class Game_Application {
     this.discardContainers = [];
 
     this.replay.actors.forEach((actor, index) => {
-      const discardContainer = new Container_Discard(index, actor);
+      const discardContainer = new Container_Discard(
+        index,
+        actor,
+        this.replay.playerIndex,
+      );
 
       this.discardContainers.push(discardContainer);
       this.context.stage.addChild(discardContainer);
@@ -192,7 +209,11 @@ class Game_Application {
     this.callContainers = [];
 
     this.replay.actors.forEach((actor, index) => {
-      const callContainer = new Container_Call(index, actor);
+      const callContainer = new Container_Call(
+        index,
+        actor,
+        this.replay.playerIndex,
+      );
 
       this.callContainers.push(callContainer);
       this.context.stage.addChild(callContainer);
@@ -202,7 +223,11 @@ class Game_Application {
   createRoundInfoContainer() {
     const round = this.replay.currentRound;
 
-    this.roundInfoContainer = new Container_RoundInfo(round, this.replay.actors);
+    this.roundInfoContainer = new Container_RoundInfo(
+      round,
+      this.replay.actors, this.replay.playerIndex,
+    );
+
     this.context.stage.addChild(this.roundInfoContainer);
   }
   
@@ -210,7 +235,11 @@ class Game_Application {
     this.voiceSprites = [];
 
     this.replay.actors.forEach((actor, index) => {
-      const voiceSprite = new Sprite_Voice(index, actor);
+      const voiceSprite = new Sprite_Voice(
+        index,
+        actor,
+        this.replay.playerIndex,
+      );
 
       this.voiceSprites.push(voiceSprite);
       this.context.stage.addChild(voiceSprite);
@@ -239,11 +268,17 @@ class Game_Application {
 
     this.context.stage.addChild(this.nextRoundButton);
 
-    // --- Prev Round Button
+    // --- Prev Round Button ---
     this.previousRoundButton = new Sprite_TextButton('❙<', 720 + 72, 72);
     this.previousRoundButton.on('mousedown', this.rewindRound.bind(this));
 
     this.context.stage.addChild(this.previousRoundButton);
+
+    // --- Perspective Button --- 
+    this.perspectiveButton = new Sprite_TextButton('👀', 720 + 120, 72);
+    this.perspectiveButton.on('mousedown', this.changePerspective.bind(this));
+
+    this.context.stage.addChild(this.perspectiveButton);
 
     // --- Simulate Hitori Button ---
     this.simulateHitoriButton = new Sprite_TextButton('Simulate Hitori', 720 + 24, 120);
@@ -279,6 +314,10 @@ class Game_Application {
       this.context.stage.addChild(agariSprite);
     }
   }
+  
+  //--------------------------------------------------------------------------
+  // * Sprite Update Method
+  //--------------------------------------------------------------------------
 
   updateSprites() {
     this.updateHandContainers();
@@ -290,23 +329,36 @@ class Game_Application {
   }
 
   updateHandContainers() {
-    this.handContainers.forEach(container => container.update());
+    this.handContainers.forEach(container => {
+      container.playerIndex = this.replay.playerIndex;
+      container.update();
+    });
   }
 
   updateDiscardContainers() {
-    this.discardContainers.forEach(container => container.update());
+    this.discardContainers.forEach(container => {
+      container.playerIndex = this.replay.playerIndex;
+      container.update();
+    });
   }
 
   updateCallContainers() {
-    this.callContainers.forEach(container => container.update());
+    this.callContainers.forEach(container => {
+      container.playerIndex = this.replay.playerIndex;
+      container.update();
+    });
   }
 
   updateRoundInfoContainer() {
+    this.roundInfoContainer.playerIndex = this.replay.playerIndex;
     this.roundInfoContainer.update();
   }
 
   updateVoiceSprites() {
-    this.voiceSprites.forEach(sprite => sprite.update());
+    this.voiceSprites.forEach(sprite => {
+      sprite.playerIndex = this.replay.playerIndex;
+      sprite.update();
+    });
   }
 
   // TODO: Make Result Sprite a first class citizen

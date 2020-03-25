@@ -107,10 +107,12 @@ export class Sprite_Tile extends PIXI.Sprite {
 
 export class Sprite_Voice extends PIXI.Text {
 
-  constructor(index, actor) {
+  constructor(index, actor, playerIndex) {
     super();
     this.index = index;
     this.actor = actor;
+    this.playerIndex = playerIndex;
+
     this.style = Config.VOICE_TEXT_STYLE;
   }
 
@@ -128,7 +130,9 @@ export class Sprite_Voice extends PIXI.Text {
   }
 
   updateTextPosition() {
-    switch(this.index) {
+    const displayIndex = (this.index + this.playerIndex) % 4;
+
+    switch(displayIndex) {
       case 0:
         this.x = (Config.DISPLAY_WIDTH - this.width) / 2;
         this.y = Config.DISPLAY_HEIGHT - 128;
@@ -147,7 +151,7 @@ export class Sprite_Voice extends PIXI.Text {
         break;
     }
 
-    this.angle = 360 - 90 * this.index;
+    this.angle = 360 - 90 * displayIndex;
   }
 
 }
