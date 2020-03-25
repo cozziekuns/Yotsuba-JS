@@ -468,11 +468,6 @@ export class SimulationAdapter {
       return 1;
     }
 
-    if (playerIndex === 3) {
-      console.log(this.wallTiles);
-      console.log(drawsLeft);
-    }
-
     return Simulator.simulateHitori(
       this.wall,
       this.wallTiles,

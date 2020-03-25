@@ -2,7 +2,12 @@
 import * as Config from './config.js';
 import { Parser_TenhouGame } from './parser.js';
 import { Sprite_TextButton, Sprite_Voice } from './sprite.js';
-import { Container_Hand, Container_Call, Container_Discard, Container_RoundInfo } from './container.js';
+import { 
+  Container_Hand,
+  Container_Call,
+  Container_Discard,
+  Container_RoundInfo
+} from './container.js';
 
 const REPLAY_FILE = 'log/replay2.xml';
 
@@ -156,13 +161,17 @@ class Game_Application {
   callSimulateHitori() {
     // TODO: Store these values somewhere.
     for (let i = 0; i < 4; i++) {
-      const drawsLeft = Math.ceil((this.replay.currentRound.tilesLeft - i) / 4);
+      const index = (i + this.replay.playerIndex) % 4;
+      
+      const drawsLeft = Math.ceil(
+        (this.replay.currentRound.tilesLeft - index) / 4
+      );
 
-      const tenpaiChance = this.replay.simulateHitori(i, drawsLeft, 1);
+      const tenpaiChance = this.replay.simulateHitori(index, drawsLeft, 1);
       const tenpaiChanceText = (tenpaiChance * 100).toPrecision(4)  + '%';
       const tenpaiText = 'P' + i + ' Hitori Tenpai Chance: ' + tenpaiChanceText;
 
-      const agariChance = this.replay.simulateHitori(i, drawsLeft, 0);
+      const agariChance = this.replay.simulateHitori(index, drawsLeft, 0);
       const agariChanceText = (agariChance * 100).toPrecision(4)  + '%';
       const agariText = 'P' + i + ' Hitori Agari Chance: ' + agariChanceText;
 
@@ -172,7 +181,7 @@ class Game_Application {
   }
 
   callSimulateShoubu() {
-    const playerDrawsLeft = Math.ceil((this.replay.currentRound.tilesLeft ) / 4);
+    const playerDrawsLeft = Math.ceil((this.replay.currentRound.tilesLeft) / 4);
     const oppDrawsLeft = Math.ceil((this.replay.currentRound.tilesLeft - 3) / 4);
     const drawsLeft = playerDrawsLeft + oppDrawsLeft;
 
