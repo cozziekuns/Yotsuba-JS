@@ -12,6 +12,7 @@ export class Container_Hand extends PIXI.Container {
     this.index = index;
     this.actor = actor;
     this.playerIndex = playerIndex;
+    this.showTiles = true;
 
     this.createTileSprites();
   }
@@ -23,16 +24,22 @@ export class Container_Hand extends PIXI.Container {
     }
   }
 
+  toggleShowTiles() {
+    this.showTiles = !this.showTiles;
+  }
+
   update() {
     this.updatePosition();
     this.updateChildren();
   }
 
   updatePosition() {
+    const displayIndex = (4 + this.index - this.playerIndex) % 4;
+
     this.x = (Config.DISPLAY_WIDTH - 14 * Config.TILE_WIDTH) / 2;
     this.y = (Config.DISPLAY_HEIGHT - Config.TILE_HEIGHT);
 
-    switch ((this.index + this.playerIndex) % 4) {
+    switch (displayIndex) {
       case 0:
         this.x = (Config.DISPLAY_WIDTH - 14 * Config.TILE_WIDTH) / 2;
         this.y = Config.DISPLAY_HEIGHT - Config.TILE_HEIGHT;
@@ -51,13 +58,17 @@ export class Container_Hand extends PIXI.Container {
         break;
     }
 
-    this.angle = 360 - 90 * ((this.index + this.playerIndex) % 4);
+    this.angle = 360 - 90 * displayIndex;
   }
 
   updateChildren() {
     this.children.forEach((sprite, index) => {
       sprite.x = index * Config.TILE_WIDTH;
-      sprite.tile = this.actor.hand.getTileAtIndex(index); 
+      sprite.tile = this.actor.hand.getTileAtIndex(index);
+
+      if (!this.showTiles && sprite.tile >= 0) {
+        sprite.tile = -2;
+      }
 
       if (this.actor.hasDrawnTile && index == this.actor.hand.tiles.length - 1) {
         sprite.x += 4;
@@ -97,7 +108,7 @@ export class Container_Call extends PIXI.Container {
   }
 
   updatePosition() {
-    const displayIndex = (this.index + this.playerIndex) % 4;
+    const displayIndex = (4 + this.index - this.playerIndex) % 4;
 
     switch (displayIndex) {
       case 0:
@@ -187,7 +198,7 @@ export class Container_Discard extends PIXI.Container {
   }
 
   updatePosition() {
-    const displayIndex = (this.index + this.playerIndex) % 4;
+    const displayIndex = (4 + this.index - this.playerIndex) % 4;
 
     switch (displayIndex) {
       case 0:
@@ -409,7 +420,7 @@ export class Container_RoundInfo extends PIXI.Container {
 
   updateRiichiSprites() {
     this.actors.forEach((actor, index) => {
-      const displayIndex = (index + this.playerIndex) % 4;
+      const displayIndex = (4 + index - this.playerIndex) % 4;
 
       this.riichiSprites[displayIndex].visible = (actor.riichiStep == 2);
     });
@@ -417,7 +428,7 @@ export class Container_RoundInfo extends PIXI.Container {
 
   updatePointsSprites() {
     this.actors.forEach((actor, index) => {
-      const displayIndex = (index + this.playerIndex) % 4;
+      const displayIndex = (4 + index - this.playerIndex) % 4;
 
       const actorWind = this.round.getActorWind(actor.index);
       const windText = Config.WIND_ROTATION_TEXT[actorWind];

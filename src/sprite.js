@@ -130,7 +130,7 @@ export class Sprite_Voice extends PIXI.Text {
   }
 
   updateTextPosition() {
-    const displayIndex = (this.index + this.playerIndex) % 4;
+    const displayIndex = (4 + this.index - this.playerIndex) % 4;
 
     switch(displayIndex) {
       case 0:

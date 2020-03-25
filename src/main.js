@@ -91,8 +91,27 @@ class Game_Application {
   // * Perspective Control
   //--------------------------------------------------------------------------
 
+  showHideHands() {
+    for (let i = 0; i < this.handContainers.length; i++) {
+      if (i === this.replay.playerIndex) {
+        continue;
+      }
+
+      this.handContainers[i].toggleShowTiles();
+    }
+
+    this.refreshSprites();
+  }
+
   changePerspective() {
-    this.replay.playerIndex = (this.replay.playerIndex + 1) % 4;
+    const newPlayerIndex = (this.replay.playerIndex + 1) % 4;
+
+    if (!this.handContainers[newPlayerIndex].showTiles) {
+      this.handContainers[this.replay.playerIndex].toggleShowTiles();
+      this.handContainers[newPlayerIndex].toggleShowTiles();
+    }
+
+    this.replay.playerIndex = newPlayerIndex;
     this.refreshSprites();
   }
 
@@ -262,6 +281,12 @@ class Game_Application {
 
     this.context.stage.addChild(this.backwardButton);
 
+    // --- Show / Hide Button ---
+    this.showHideButton = new Sprite_TextButton('Show / Hide', 720 + 120, 24);
+    this.showHideButton.on('mousedown', this.showHideHands.bind(this));
+
+    this.context.stage.addChild(this.showHideButton);
+
     // --- Next Round Button ---
     this.nextRoundButton = new Sprite_TextButton('>❙', 720 + 24, 72);
     this.nextRoundButton.on('mousedown', this.advanceRound.bind(this));
@@ -367,7 +392,7 @@ class Game_Application {
       if (index < 4) {
         sprite.text = 'P' + index + ' Hitori Tenpai Chance: -%';
       } else {
-        sprite.text = 'P' + index + ' Hitori Agari Chance: -%';
+        sprite.text = 'P' + (index - 4) + ' Hitori Agari Chance: -%';
       }
     });
   }
