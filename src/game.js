@@ -572,4 +572,15 @@ export class Game_Replay {
     return this.simulation.simulateHitori(playerIndex, drawsLeft, endShanten);
   }
 
+  simulateBlackBoxShoubu(playerIndex, oppUkeire, drawsLeft, currentPlayer) {
+    this.simulation.processGameState(this.simulationPayload);
+    
+    return this.simulation.simulateBlackBoxShoubu(
+      playerIndex,
+      oppUkeire,
+      drawsLeft,
+      currentPlayer,
+    );
+  }
+
 }

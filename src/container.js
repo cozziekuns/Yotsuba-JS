@@ -293,7 +293,7 @@ export class Container_RoundInfo extends PIXI.Container {
     for (let i = 0; i < 4; i++) {
       const riichiSprite = new PIXI.Sprite.from(
         // TODO: Put this somewhere real
-        PIXI.loader.resources['img/tennbou-001.png'].texture
+        PIXI.Loader.shared.resources['img/tennbou-001.png'].texture
       );
 
       if (i % 2 === 0) {

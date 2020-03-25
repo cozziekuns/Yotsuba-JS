@@ -227,7 +227,7 @@ class Simulator {
       
       memo.get(configurationNode)[drawsLeft - 1][index] = agariMatrix[index];
     });
-  
+
     return agariMatrix;
   }
 
@@ -486,7 +486,7 @@ export class SimulationAdapter {
   simulateBlackBoxShoubu(playerIndex, oppUkeire, drawsLeft, currentPlayer) {
     return Simulator.simulateBlackBoxShoubu(
       this.wall,
-      this.walltiles,
+      this.wallTiles,
       this.actorConfigurations[playerIndex],
       oppUkeire,
       drawsLeft,

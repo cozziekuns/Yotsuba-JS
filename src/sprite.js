@@ -96,7 +96,7 @@ export class Sprite_Tile extends PIXI.Sprite {
     }
 
     const filename = 'img/' + this.textureFilename();
-    this.texture = PIXI.loader.resources[filename].texture;
+    this.texture = PIXI.Loader.shared.resources[filename].texture;
   }
 
 }

@@ -3,7 +3,10 @@ import * as Config from './config.js';
 import { Parser_TenhouGame } from './parser.js';
 import { Sprite_TextButton, Sprite_Voice } from './sprite.js';
 import { Container_Hand, Container_Call, Container_Discard, Container_RoundInfo } from './container.js';
-  
+
+const REPLAY_FILE = 'log/replay2.xml';
+
+PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
 //=============================================================================
 // ** Game_Application
@@ -19,23 +22,22 @@ class Game_Application {
   }
 
   preloadAllAssets() {
-    PIXI.loader
+    PIXI.loader 
       .add('manifest.json')
-      .add('log/replay.xml')
+      .add(REPLAY_FILE)
       .load(this.preloadAllImages.bind(this));
   }
 
   preloadAllImages() {
-    const img_filenames = PIXI.loader.resources['manifest.json'].data['img'].map(
-      filename => 'img/' + filename
-    );
+    const imgData = PIXI.Loader.shared.resources['manifest.json'].data['img'];
+    const imgFilenames = imgData.map(filename => 'img/' + filename);
 
-    PIXI.loader.add(img_filenames);
-    PIXI.loader.onComplete.add(this.parseTenhouLog.bind(this));
+    PIXI.Loader.shared.add(imgFilenames);
+    PIXI.Loader.shared.onComplete.add(this.parseTenhouLog.bind(this));
   }
 
   parseTenhouLog() {
-    const xmlDocument = PIXI.loader.resources['log/replay.xml'].data;
+    const xmlDocument = PIXI.Loader.shared.resources[REPLAY_FILE].data;
     const parser = new Parser_TenhouGame(xmlDocument);
 
     this.replay = parser.parseLog();
@@ -141,6 +143,15 @@ class Game_Application {
     }
   }
 
+  callSimulateShoubu() {
+    const playerDrawsLeft = Math.ceil((this.replay.currentRound.tilesLeft ) / 4);
+    const oppDrawsLeft = Math.ceil((this.replay.currentRound.tilesLeft - 3) / 4);
+    const drawsLeft = playerDrawsLeft + oppDrawsLeft;
+
+    const agariChance = this.replay.simulateBlackBoxShoubu(2, 4, drawsLeft, 0);
+    console.log(agariChance);
+  }
+
   //--------------------------------------------------------------------------
   // * Sprite Handling Logic
   //--------------------------------------------------------------------------
@@ -239,6 +250,12 @@ class Game_Application {
     this.simulateHitoriButton.on('mousedown', this.callSimulateHitori.bind(this));
 
     this.context.stage.addChild(this.simulateHitoriButton);
+
+    // --- Simulate Shoubu Button ---
+    this.simulateShoubuButton = new Sprite_TextButton('Simulate Shoubu', 720 + 24, 120 + 48);
+    this.simulateShoubuButton.on('mousedown', this.callSimulateShoubu.bind(this));
+
+    this.context.stage.addChild(this.simulateShoubuButton);
   }
 
   createResultSprites() {
@@ -247,7 +264,7 @@ class Game_Application {
     for (let i = 0; i < 4; i++) {
       const tenpaiSprite = new PIXI.Text();
       tenpaiSprite.x = 720 + 24;
-      tenpaiSprite.y = 172 + i * 32; 
+      tenpaiSprite.y = 172 + 48 + i * 32; 
             
       this.resultSprites.push(tenpaiSprite);
       this.context.stage.addChild(tenpaiSprite);
@@ -256,7 +273,7 @@ class Game_Application {
     for (let i = 0; i < 4; i++) {
       const agariSprite = new PIXI.Text();
       agariSprite.x = 720 + 24;
-      agariSprite.y = 332 + i * 32;
+      agariSprite.y = 332 + 48 + i * 32;
 
       this.resultSprites.push(agariSprite);
       this.context.stage.addChild(agariSprite);
