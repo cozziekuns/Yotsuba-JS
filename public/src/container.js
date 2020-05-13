@@ -11,6 +11,7 @@ export class Container_Hand extends PIXI.Container {
     super();
     this.index = index;
     this.actor = actor;
+    this.showHands = false;
 
     this.createTileSprites();
   }
@@ -57,6 +58,10 @@ export class Container_Hand extends PIXI.Container {
     this.children.forEach((sprite, index) => {
       sprite.x = index * Config.TILE_WIDTH;
       sprite.tile = this.actor.hand.getTileAtIndex(index);
+      
+      if (sprite.tile > 0 && !this.showHand) {
+        sprite.tile = -2;
+      }
 
       if (this.actor.hasDrawnTile && index == this.actor.hand.tiles.length - 1) {
         sprite.x += 4;

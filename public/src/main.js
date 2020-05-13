@@ -17,6 +17,7 @@ class Game_Application {
   constructor() {
     this.context = null;
     this.replay = null;
+    this.showHands = false;
     this.mouseTimeout = null;
     this.mouseInterval = null;
   }
@@ -80,7 +81,7 @@ class Game_Application {
 
         this.parseTenhouLog(logBody);
         this.refreshSprites();
-        
+
         this.overlay.deactivate();
         this.urlInput.disabled = false;
       }
@@ -131,6 +132,11 @@ class Game_Application {
 
   changePerspective() {
     this.replay.perspective = (this.replay.perspective + 1) % 4;
+    this.refreshSprites();
+  }
+
+  showHideHands() { 
+    this.showHands = !this.showHands;
     this.refreshSprites();
   }
 
@@ -270,6 +276,13 @@ class Game_Application {
     this.perspectiveButton.on('mousedown', this.changePerspective.bind(this));
 
     this.context.stage.addChild(this.perspectiveButton);
+
+    // --- Show / Hide Hands ---
+    this.showHideButton = new Sprite_TextButton('Show/Hide Hands', Config.DISPLAY_WIDTH + 48, 120);
+    this.showHideButton.y = this.perspectiveButton.y + 48;
+    this.showHideButton.on('mousedown', this.showHideHands.bind(this));
+
+    this.context.stage.addChild(this.showHideButton);
   }
 
   createUrlInputSprite() {
@@ -313,6 +326,7 @@ class Game_Application {
       const actorIndex = (index + this.replay.perspective) % 4;
 
       container.actor = this.replay.actors[actorIndex];
+      container.showHand = (index == 0 || this.showHands);
       container.update();
     });
   }
