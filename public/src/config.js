@@ -1,20 +1,25 @@
-export const WINDOW_WIDTH = 1600;
-export const WINDOW_HEIGHT = 900;
+export const WINDOW_WIDTH = window.innerWidth;
+export const WINDOW_HEIGHT = window.innerHeight;
 
-export const DISPLAY_WIDTH = 876;
-export const DISPLAY_HEIGHT = 876;
+export const DISPLAY_WIDTH = window.innerHeight - 16;
+export const DISPLAY_HEIGHT = window.innerHeight - 16;
 
 export const TILE_WIDTH = 44;
 export const TILE_HEIGHT = 60;
 
-export const GAME_INFO_WIDTH = 6 * TILE_WIDTH + TILE_HEIGHT;
-export const GAME_INFO_HEIGHT = 6 * TILE_WIDTH + TILE_HEIGHT;
+export const GAME_INFO_WIDTH = 5 * TILE_WIDTH + TILE_HEIGHT;
+export const GAME_INFO_HEIGHT = 5 * TILE_WIDTH + TILE_HEIGHT;
 
 export const GAME_INFO_TEXT_STYLE = new PIXI.TextStyle({
   fill: 'white',
   fontFamily: 'Arial',
   fontWeight: 'bold'
 });
+
+export const GAME_INFO_TEXT_POINT_SIZE = 28;
+export const GAME_INFO_TEXT_ROUND_SIZE = 36;
+export const GAME_INFO_TEXT_WALL_SIZE = 20;
+export const GAME_INFO_TEXT_BONUS_SIZE = 20;
 
 export const VOICE_TEXT_STYLE = new PIXI.TextStyle({
   fill: 'white',

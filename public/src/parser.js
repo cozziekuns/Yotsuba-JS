@@ -19,7 +19,6 @@ export class Parser_TenhouGame {
   }
 
   parseNode(node) {
-    console.log(node);
     switch(node.nodeName) {
       case 'UN':
         this.parseUnNode(node);
@@ -241,6 +240,10 @@ export class Parser_TenhouGame {
     }
 
     return mentsu;
+  }
+
+  parseAddedKan() {
+    return null;
   }
 
   parseKan() {

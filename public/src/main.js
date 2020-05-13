@@ -1,7 +1,7 @@
 
 import * as Config from './config.js';
 import { Parser_TenhouGame } from './parser.js';
-import { Sprite_TextButton, Sprite_Voice } from './sprite.js';
+import { Sprite_Overlay, Sprite_TextButton, Sprite_Voice } from './sprite.js';
 import { Container_Hand, Container_Call, Container_Discard, Container_RoundInfo } from './container.js';
 
 const REPLAY_FILE = 'log/replay4.xml';
@@ -22,64 +22,24 @@ class Game_Application {
   }
 
   preloadAllAssets() {
-    PIXI.loader
+    PIXI.Loader.shared
       .add('manifest.json')
       .add(REPLAY_FILE)
       .load(this.preloadAllImages.bind(this));
   }
 
   preloadAllImages() {
+    this.parseTenhouLog();
+
     const imgData = PIXI.Loader.shared.resources['manifest.json'].data['img'];
     const imgFilenames = imgData.map(filename => 'img/' + filename);
 
     PIXI.Loader.shared.add(imgFilenames);
-    PIXI.Loader.shared.onComplete.add(this.parseTenhouLog.bind(this));
-  }
-
-  loadTenhouLog(url) {
-    const regexMatch = url.match(/log=([^&]+)/);
- 
-    if (!regexMatch || !regexMatch[1]) {
-      // Alert the user that their URL is malformed
-      return;
-    }
-  
-    const uuid = regexMatch[1];
-
-    const eventListener = () => {
-      if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
-        const xmlParser = new DOMParser();
-        const logBody = xmlParser.parseFromString(request.responseText, 'text/xml');
-
-        const parser = new Parser_TenhouGame(logBody);
-
-        this.replay = parser.parseLog();
-        this.replay.startCurrentRound();
-
-        console.log('all done!');
-        this.refreshSprites();
-      }
-    }
-
-    const request = new XMLHttpRequest();
-    request.addEventListener('readystatechange', eventListener);
-
-    request.open('POST', '/proxy', true);
-    request.setRequestHeader('Content-Type', 'application/json');
-    request.send(JSON.stringify({uuid: uuid}));
-  }
-
-  parseTenhouLog() {
-    const xmlDocument = PIXI.Loader.shared.resources[REPLAY_FILE].data;
-    const parser = new Parser_TenhouGame(xmlDocument);
-
-    this.replay = parser.parseLog();
-    this.run();
+    PIXI.Loader.shared.onComplete.add(this.run.bind(this));
   }
 
   run() {
     this.createContext();
-    this.replay.startCurrentRound();
     this.createSprites();
     this.updateSprites();
   }
@@ -94,6 +54,55 @@ class Game_Application {
     });
 
     document.body.appendChild(this.context.view);
+  }
+
+  //--------------------------------------------------------------------------
+  // * Tenhou Log Parsing
+  //--------------------------------------------------------------------------
+
+  loadTenhouLog(url) {
+    const regexMatch = url.match(/log=([^&]+)/);
+ 
+    if (!regexMatch || !regexMatch[1]) {
+      // Alert the user that their URL is malformed
+      return;
+    }
+
+    this.overlay.activate();
+    this.urlInput.disabled = true;
+  
+    const uuid = regexMatch[1];
+
+    const eventListener = () => {
+      if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
+        const xmlParser = new DOMParser();
+        const logBody = xmlParser.parseFromString(request.responseText, 'text/xml');
+
+        this.parseTenhouLog(logBody);
+        this.refreshSprites();
+        
+        this.overlay.deactivate();
+        this.urlInput.disabled = false;
+      }
+    }
+
+    const request = new XMLHttpRequest();
+    request.addEventListener('readystatechange', eventListener);
+
+    request.open('POST', '/proxy', true);
+    request.setRequestHeader('Content-Type', 'application/json');
+    request.send(JSON.stringify({uuid: uuid}));
+  }
+
+  parseTenhouLog(xmlDocument) {
+    if (!xmlDocument) {
+      xmlDocument = PIXI.Loader.shared.resources[REPLAY_FILE].data;
+    }
+    
+    const parser = new Parser_TenhouGame(xmlDocument);
+
+    this.replay = parser.parseLog();
+    this.replay.startCurrentRound();
   }
 
   //--------------------------------------------------------------------------
@@ -171,6 +180,7 @@ class Game_Application {
     this.createVoiceSprites();
     this.createButtonSprites();
     this.createUrlInputSprite();
+    this.createOverlaySprite();
   }
 
   createHandContainers() {
@@ -227,14 +237,14 @@ class Game_Application {
   // TODO: Clean this up... eventually...
   createButtonSprites() {
     // --- Forward Button ---
-    this.forwardButton = new Sprite_TextButton('>>', Config.DISPLAY_WIDTH + 48, 24);
+    this.forwardButton = new Sprite_TextButton('>>', Config.DISPLAY_WIDTH + 48, 72);
     this.forwardButton.on('mousedown', this.setAdvanceInterval.bind(this));
     this.forwardButton.on('mouseup', this.clearMouseIntervalAndTimeout.bind(this));
 
     this.context.stage.addChild(this.forwardButton);
 
     // --- Backward Button ---
-    this.backwardButton = new Sprite_TextButton('<<', Config.DISPLAY_WIDTH + 96, 24);
+    this.backwardButton = new Sprite_TextButton('<<', Config.DISPLAY_WIDTH + 96, 72);
     this.backwardButton.on('mousedown', this.setRewindInterval.bind(this));
     this.backwardButton.on('mouseup', this.clearMouseIntervalAndTimeout.bind(this));
 
@@ -242,18 +252,21 @@ class Game_Application {
 
     // --- Next Round Button ---
     this.nextRoundButton = new Sprite_TextButton('>❙', Config.DISPLAY_WIDTH + 48, 72);
+    this.nextRoundButton.y = this.forwardButton.y + 48;
     this.nextRoundButton.on('mousedown', this.advanceRound.bind(this));
 
     this.context.stage.addChild(this.nextRoundButton);
 
     // --- Prev Round Button ---
     this.previousRoundButton = new Sprite_TextButton('❙<', Config.DISPLAY_WIDTH + 96, 72);
+    this.previousRoundButton.y = this.backwardButton.y + 48;
     this.previousRoundButton.on('mousedown', this.rewindRound.bind(this));
 
     this.context.stage.addChild(this.previousRoundButton);
 
     // --- Switch Perspective Button ---
     this.perspectiveButton = new Sprite_TextButton('Perspective', Config.DISPLAY_WIDTH + 48, 120);
+    this.perspectiveButton.y = this.nextRoundButton.y + 48;
     this.perspectiveButton.on('mousedown', this.changePerspective.bind(this));
 
     this.context.stage.addChild(this.perspectiveButton);
@@ -261,12 +274,12 @@ class Game_Application {
 
   createUrlInputSprite() {
     this.urlInput = new PIXI.TextInput({
-      input: { fontSize: '24px', width: '600px', padding: '12px' },
-      box: { fill: 0xEEEEEE },
+      input: { fontSize: '20px', width: '512px', padding: '12px' },
+      box: { fill: 0xEEEEEE, stroke: { width: 2 } },
     });
 
     this.urlInput.x = Config.DISPLAY_WIDTH + 48;
-    this.urlInput.y = Config.DISPLAY_HEIGHT - 72;
+    this.urlInput.y = 16;
 
     this.urlInput.placeholder = 'Input Tenhou URL...';
     this.urlInput.substituteText = false;
@@ -280,6 +293,11 @@ class Game_Application {
     });
 
     this.context.stage.addChild(this.urlInput);
+  }
+
+  createOverlaySprite() {
+    this.overlay = new Sprite_Overlay('Loading...');
+    this.context.stage.addChild(this.overlay);
   }
 
   updateSprites() {

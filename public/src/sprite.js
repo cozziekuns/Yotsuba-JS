@@ -1,6 +1,62 @@
 import * as Config from './config.js';
 
 //=============================================================================
+// ** Sprite_Overlay
+//=============================================================================
+
+export class Sprite_Overlay extends PIXI.Container {
+
+  constructor(text) {
+    super();
+    this.text = text;
+    this.hitArea = new PIXI.Rectangle(0, 0, Config.WINDOW_WIDTH, Config.WINDOW_HEIGHT);
+
+    this.createBackgroundSprite();
+    this.createTextSprite();
+    this.deactivate();
+  }
+
+  //--------------------------------------------------------------------------
+  // * Control 
+  //--------------------------------------------------------------------------
+
+  activate() {
+    this.visible = true;
+    this.interactive = true;
+  }
+
+  deactivate() {
+    this.visible = false;
+    this.interactive = false;
+  }
+
+  //--------------------------------------------------------------------------
+  // * Initialization Methods
+  //--------------------------------------------------------------------------
+
+  createBackgroundSprite() {
+    this.backgroundSprite = new PIXI.Graphics();
+    this.backgroundSprite.alpha = 0.5;
+    
+    this.backgroundSprite.beginFill(0x202020);
+    this.backgroundSprite.drawRect(0, 0, Config.WINDOW_WIDTH, Config.WINDOW_HEIGHT);
+    this.backgroundSprite.endFill();
+
+    this.addChild(this.backgroundSprite);
+  }
+
+  createTextSprite() {
+    this.textSprite = new PIXI.Text(this.text);
+    this.textSprite.style = Config.VOICE_TEXT_STYLE;
+    this.textSprite.x = (Config.WINDOW_WIDTH - this.textSprite.width) / 2;
+    this.textSprite.y = (Config.WINDOW_HEIGHT - this.textSprite.height) / 2;
+
+    this.addChild(this.textSprite);
+  }
+
+}
+
+//=============================================================================
 // ** Sprite_TextButton
 //=============================================================================
 
@@ -16,13 +72,14 @@ export class Sprite_TextButton extends PIXI.Container {
 
     this.createTextSprite();
     this.createBackgroundSprite();
-    this.addChildSprites();
   }
 
   createTextSprite() {
     this.textSprite = new PIXI.Text(this.name);
     this.textSprite.x = 4;
     this.textSprite.y = 4;
+
+    this.addChild(this.textSprite);
   }
 
   createBackgroundSprite() {
@@ -41,10 +98,7 @@ export class Sprite_TextButton extends PIXI.Container {
     graphics.endFill();
 
     this.backgroundSprite = graphics;
-  }
-
-  addChildSprites() {
-    this.addChild(this.backgroundSprite, this.textSprite);
+    this.addChildAt(this.backgroundSprite, 0);
   }
 
 }

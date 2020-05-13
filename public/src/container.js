@@ -317,7 +317,7 @@ export class Container_RoundInfo extends PIXI.Container {
 
   createPointsSprites() {
     const style = Config.GAME_INFO_TEXT_STYLE;
-    style.fontSize = 32;
+    style.fontSize = Config.GAME_INFO_TEXT_POINT_SIZE;
 
     this.pointsSprites = [];
 
@@ -332,7 +332,7 @@ export class Container_RoundInfo extends PIXI.Container {
 
   createRoundSprite() {
     const style = Config.GAME_INFO_TEXT_STYLE.clone();
-    style.fontSize = 48;
+    style.fontSize = Config.GAME_INFO_TEXT_ROUND_SIZE;
 
     this.roundSprite = new PIXI.Text('', style);
     this.addChild(this.roundSprite);
@@ -340,7 +340,7 @@ export class Container_RoundInfo extends PIXI.Container {
 
   createWallSprite() {
     const style = Config.GAME_INFO_TEXT_STYLE.clone();
-    style.fontSize = 24;
+    style.fontSize = Config.GAME_INFO_TEXT_WALL_SIZE;
 
     this.wallSprite = new PIXI.Text('', style);
     this.addChild(this.wallSprite);
@@ -348,7 +348,7 @@ export class Container_RoundInfo extends PIXI.Container {
 
   createBonusSprite() {
     const style = Config.GAME_INFO_TEXT_STYLE.clone();
-    style.fontSize = 24;
+    style.fontSize = Config.GAME_INFO_TEXT_BONUS_SIZE;
 
     this.bonusSprite = new PIXI.Text('', style);
     this.addChild(this.bonusSprite);
@@ -414,7 +414,7 @@ export class Container_RoundInfo extends PIXI.Container {
 
     this.roundSprite.text = Config.WIND_ROTATION_TEXT[wind] + baseText;
     this.roundSprite.x = (Config.GAME_INFO_WIDTH - this.roundSprite.width) / 2;
-    this.roundSprite.y = Config.GAME_INFO_HEIGHT / 2 - 92;
+    this.roundSprite.y = Config.GAME_INFO_HEIGHT / 2 - 80;
   }
 
   updateWallSprite() {
@@ -427,7 +427,7 @@ export class Container_RoundInfo extends PIXI.Container {
     const hombaText = '本：' + this.round.homba;
     const riibouText = '棒：' + this.round.riibou;
 
-    this.bonusSprite.text = hombaText + ' ' + riibouText;
+    this.bonusSprite.text = hombaText + '　' + riibouText;
     this.bonusSprite.x = (Config.GAME_INFO_WIDTH - this.bonusSprite.width) / 2;
     this.bonusSprite.y = this.roundSprite.y + this.roundSprite.height + 8;
   }
