@@ -59,7 +59,7 @@ export class Container_Hand extends PIXI.Container {
       sprite.x = index * Config.TILE_WIDTH;
       sprite.tile = this.actor.hand.getTileAtIndex(index);
       
-      if (sprite.tile > 0 && !this.showHand) {
+      if (sprite.tile >= 0 && !this.showHand) {
         sprite.tile = -2;
       }
 
@@ -171,6 +171,7 @@ export class Container_Discard extends PIXI.Container {
     super();
     this.index = index;
     this.actor = actor;
+    this.tedashi = false;
 
     this.createDiscardSprites();
   }
@@ -239,6 +240,12 @@ export class Container_Discard extends PIXI.Container {
         && Math.floor(this.actor.riichiIndex / 6) === row
       ) {
         sprite.x += Config.TILE_HEIGHT - Config.TILE_WIDTH;
+      }
+
+      if (this.tedashi && this.actor.tedashi.includes(tile)) {
+        sprite.tint = Config.TEDASHI_TINT;
+      } else {
+        sprite.tint = 0xFFFFFF;
       }
 
       sprite.update();

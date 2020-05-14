@@ -1,8 +1,8 @@
-export const WINDOW_WIDTH = window.innerWidth - 16;
-export const WINDOW_HEIGHT = window.innerHeight - 16;
+export const WINDOW_WIDTH = Math.max(window.innerWidth - 16, 1200);
+export const WINDOW_HEIGHT =  Math.max(window.innerHeight - 16, 800);
 
-export const DISPLAY_WIDTH = window.innerHeight - 32;
-export const DISPLAY_HEIGHT = window.innerHeight - 32;
+export const DISPLAY_WIDTH = Math.max(window.innerHeight - 32, 784);
+export const DISPLAY_HEIGHT = Math.max(window.innerHeight - 32, 784);
 
 export const TILE_WIDTH = 44;
 export const TILE_HEIGHT = 60;
@@ -44,3 +44,5 @@ export const VOICE_TEXT = ['リーチ', 'ロン', 'ツモ', 'チー', 'ポン', 
 
 export const REPEAT_INITIAL_TICK = 300;
 export const REPEAT_TICK = 50;
+
+export const TEDASHI_TINT = 0xA0A0A0;

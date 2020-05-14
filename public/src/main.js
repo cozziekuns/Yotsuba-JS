@@ -17,7 +17,9 @@ class Game_Application {
   constructor() {
     this.context = null;
     this.replay = null;
+
     this.showHands = false;
+    this.tedashi = true;
     this.mouseTimeout = null;
     this.mouseInterval = null;
   }
@@ -163,16 +165,6 @@ class Game_Application {
     this.refreshSprites();
   }
 
-  changePerspective() {
-    this.replay.perspective = (this.replay.perspective + 1) % 4;
-    this.refreshSprites();
-  }
-
-  showHideHands() { 
-    this.showHands = !this.showHands;
-    this.refreshSprites();
-  }
-
   //--------------------------------------------------------------------------
   // * Interval Logic
   //--------------------------------------------------------------------------
@@ -205,6 +197,25 @@ class Game_Application {
 
     this.mouseTimeout = null;
     this.mouseInterval = null;
+  }
+
+  //--------------------------------------------------------------------------
+  // * Display Toggling
+  //--------------------------------------------------------------------------
+
+  changePerspective() {
+    this.replay.perspective = (this.replay.perspective + 1) % 4;
+    this.refreshSprites();
+  }
+
+  showHideHands() { 
+    this.showHands = !this.showHands;
+    this.refreshSprites();
+  }
+
+  toggleTedashi() {
+    this.tedashi = !this.tedashi;
+    this.refreshSprites();
   }
 
   //--------------------------------------------------------------------------
@@ -317,6 +328,13 @@ class Game_Application {
     this.showHideButton.on('mousedown', this.showHideHands.bind(this));
 
     this.context.stage.addChild(this.showHideButton);
+
+    // --- Tedashi Button ---
+    this.tedashiButton = new Sprite_TextButton('Tedashi', Config.DISPLAY_WIDTH + 48, 120);
+    this.tedashiButton.y = this.showHideButton.y + 48;
+    this.tedashiButton.on('mousedown', this.toggleTedashi.bind(this));
+
+    this.context.stage.addChild(this.tedashiButton);
   }
 
   createUrlInputSprite() {
@@ -388,6 +406,8 @@ class Game_Application {
       const actorIndex = (index + this.replay.perspective) % 4;
 
       container.actor = this.replay.actors[actorIndex];
+      container.tedashi = this.tedashi;
+
       container.update();
     });
   }

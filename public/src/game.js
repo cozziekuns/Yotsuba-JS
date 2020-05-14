@@ -99,11 +99,10 @@ export class Game_Hand {
   }
 
   rewindLastCall() {
-    // TODO: Special casing for kans
     const lastCall = this.calls.pop();
 
     const callee_rel = (4 + lastCall.target - this.actor.index) % 4;
-    const tileIndex = (callee_rel - 1) % 2;
+    const tileIndex = 3 - callee_rel;
 
     const calledTile = lastCall.mentsu[tileIndex];
 
@@ -140,6 +139,8 @@ export class Game_Actor {
 
     this.hand = new Game_Hand(this);
     this.discards = [];
+    this.tedashi = [];
+
     this.hasDrawnTile = false;
 
     this.voice = -1;
@@ -147,6 +148,7 @@ export class Game_Actor {
 
   refresh() {
     this.discards = [];
+    this.tedashi = [];
   }
 
   drawTile(tile) {
@@ -155,6 +157,10 @@ export class Game_Actor {
   }
 
   discardTile(tile) {
+    if (tile == this.hand.getDrawnTile()) {
+      this.tedashi.push(tile);
+    }
+    
     this.hand.discardTile(tile);
     this.discards.push(tile);
 
@@ -190,7 +196,12 @@ export class Game_Actor {
     const discardTile = this.discards.pop();
 
     if (discardTile !== tile) {
+      console.log(tile, discardTile);
       console.log('DEBUG: This should never happen.');
+    }
+
+    if (this.tedashi.slice(-1) == tile) {
+      this.tedashi.pop();  
     }
 
     this.hand.drawTile(tile);
