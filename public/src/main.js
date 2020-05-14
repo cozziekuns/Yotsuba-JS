@@ -43,6 +43,39 @@ class Game_Application {
     this.createContext();
     this.createSprites();
     this.updateSprites();
+
+    const handleMouseDown = (event) => {
+      if (event.button !== 2) {
+        return;
+      }
+
+      if (
+        event.clientX < 0 || event.clientX >= Config.DISPLAY_WIDTH ||
+        event.clientY < 0 || event.clientY >= Config.DISPLAY_HEIGHT
+      ) {
+        return;
+      }
+
+      this.setRewindInterval();
+    }
+
+    const handleMouseUp = (event) => {
+      if (event.button !== 2) {
+        return;
+      }
+
+      if (
+        event.clientX < 0 || event.clientX >= Config.DISPLAY_WIDTH ||
+        event.clientY < 0 || event.clientY >= Config.DISPLAY_HEIGHT
+      ) {
+        return;
+      }
+
+      this.clearMouseIntervalAndTimeout();
+    }
+
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
   }
 
   createContext() {
@@ -187,6 +220,7 @@ class Game_Application {
     this.createButtonSprites();
     this.createUrlInputSprite();
     this.createOverlaySprite();
+    this.createDisplayOverlaySprite();
   }
 
   createHandContainers() {
@@ -313,6 +347,24 @@ class Game_Application {
     this.context.stage.addChild(this.overlay);
   }
 
+  createDisplayOverlaySprite() {
+    const hitrect = new PIXI.Rectangle(0, 0, Config.DISPLAY_WIDTH, Config.DISPLAY_HEIGHT);
+
+    this.displayOverlay = new PIXI.Graphics();
+    this.displayOverlay.hitArea = hitrect;
+    this.displayOverlay.interactive = true;
+
+    this.displayOverlay.on('mousedown', this.setAdvanceInterval.bind(this));
+    this.displayOverlay.on('mouseup', this.clearMouseIntervalAndTimeout.bind(this));
+    this.displayOverlay.on('mouseout', this.clearMouseIntervalAndTimeout.bind(this));
+
+    this.context.stage.addChild(this.displayOverlay);
+  }
+
+  //--------------------------------------------------------------------------
+  // * Sprite Update Logic
+  //--------------------------------------------------------------------------
+
   updateSprites() {
     this.updateHandContainers();
     this.updateDiscardContainers();
@@ -380,3 +432,5 @@ class Game_Application {
 
 const app = new Game_Application();
 app.preloadAllAssets();
+
+window.addEventListener('contextmenu', (ev) => ev.preventDefault());

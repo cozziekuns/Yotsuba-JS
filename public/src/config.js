@@ -1,8 +1,8 @@
-export const WINDOW_WIDTH = window.innerWidth;
-export const WINDOW_HEIGHT = window.innerHeight;
+export const WINDOW_WIDTH = window.innerWidth - 16;
+export const WINDOW_HEIGHT = window.innerHeight - 16;
 
-export const DISPLAY_WIDTH = window.innerHeight - 16;
-export const DISPLAY_HEIGHT = window.innerHeight - 16;
+export const DISPLAY_WIDTH = window.innerHeight - 32;
+export const DISPLAY_HEIGHT = window.innerHeight - 32;
 
 export const TILE_WIDTH = 44;
 export const TILE_HEIGHT = 60;
